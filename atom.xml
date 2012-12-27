@@ -4,7 +4,7 @@
   <title><![CDATA[Cooper's Blog]]></title>
   <link href="http://tanqisen.github.com/atom.xml" rel="self"/>
   <link href="http://tanqisen.github.com/"/>
-  <updated>2012-12-27T23:26:44+08:00</updated>
+  <updated>2012-12-27T23:31:08+08:00</updated>
   <id>http://tanqisen.github.com/</id>
   <author>
     <name><![CDATA[tanqisen]]></name>
@@ -88,7 +88,9 @@ $ bundle install
 
 $ rake install # Install the default Octopress theme
 </code></pre></li>
-<li><p>配置你本地的octopress</p></li>
+<li><p>配置你本地的octopress</p>
+
+<ul>
 <li><p>创建github repo，名称<code>username.github.com</code></p></li>
 <li><p>配置octopress使之与<code>username.github.com</code>关联</p>
 
@@ -97,7 +99,9 @@ $ rake setup_github_pages
   Enter the read/write url for your repository
   (For example, 'git@github.com:your_username/your_username.github.com')
   Repository url: &lt;git@github.com:yourname/yourname.github.com&gt;
-</code></pre>
+</code></pre></li>
+</ul>
+
 
 <p>以上执行后会要求 read/write url for repository ： </br>
 git@github.com:yourname/yourname.github.com.git</p></li>
@@ -124,7 +128,9 @@ $ bundle install                # Keep gems updated
 $ rake update_source            # update the template's source
 $ rake update_style             # update the template's style
 </code></pre></li>
-<li><p>编写并发布文章</p></li>
+<li><p>编写并发布文章</p>
+
+<ul>
 <li><p>发表新文章：</p>
 
 <pre><code>$ rake new_post["文章名称"]
@@ -147,6 +153,8 @@ $ rake update_style             # update the template's style
 
 <pre><code>$ rake gen_deploy
 </code></pre></li>
+</ul>
+</li>
 </ol>
 
 ]]></content>
