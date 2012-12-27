@@ -177,13 +177,29 @@ $ rake setup_github_pages
 </code></pre></li>
 </ul>
 </li>
-<li><p>初始化github repo</p>
+
+<li><p>建立并发布blog</p>
+<pre><code>$ rake generate
+$ rake deploy
+</code></pre></li>
+
+<li><p>将 source 也加入git</p>
 
 <pre><code>$ cd octopress
 $ git add .
 $ git commit -m 'your message'
 $ git push origin source
 </code></pre></li>
+
+<li><p>更新 Octopress</p>
+<p>日后有 Octopress 新版本发布，使用以下指令升级</p>
+<pre><code>$ git pull octopress master     # Get the latest Octopress
+$ bundle install                      # Keep gems updated
+$ rake update_source            # update the template's source
+$ rake update_style               # update the template's style
+</code></pre>
+</li>
+
 <li><p>编写并发布文章</p>
 
 <ul>
