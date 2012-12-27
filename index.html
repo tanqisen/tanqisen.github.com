@@ -10,7 +10,7 @@
 
   
   <meta name="description" content="生成github公钥 检查ssh公钥设置： 如果id_rsa*文件不存在，跳到第三步； $ cd .ssh
-$ ls 备份原理的ssh key： 备份旧数据，备份后删除旧数据； $ mkdir key_backup
+$ ls 备份原来的ssh key： 备份旧数据，备份后删除旧数据； $ mkdir key_backup
 $ cp id_rsa* key_backup
 $ rm id_rsa* &hellip;">
   
@@ -73,7 +73,7 @@ $ rm id_rsa* &hellip;">
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">GitHub+Octopress搭建免费blog</a></h1>
+      <h1 class="entry-title"><a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">Github Plus Octopressda Jian Mian Fei Blog</a></h1>
     
     
       <p class="meta">
@@ -89,7 +89,7 @@ $ rm id_rsa* &hellip;">
   
 
 
-<time datetime="2012-12-27T20:13:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+<time datetime="2012-12-27T00:00:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
         
       </p>
     
@@ -106,7 +106,7 @@ $ rm id_rsa* &hellip;">
 <pre><code>$ cd .ssh
 $ ls
 </code></pre></li>
-<li><p>备份原理的ssh key：</p>
+<li><p>备份原来的ssh key：</p>
 
 <p>备份旧数据，备份后删除旧数据；</p>
 
@@ -129,10 +129,10 @@ Enter same passphrase again:&lt;再次输入密码&gt;
 
 <p>最后看到下面信息就成功了</p>
 
-<pre><code>Your identification has been saved in /Users/tanqisen/.ssh/id_rsa.
-Your public key has been saved in /Users/tanqisen/.ssh/id_rsa.pub.
+<pre><code>Your identification has been saved in /Users/xxx/.ssh/id_rsa.
+Your public key has been saved in /Users/xxx/.ssh/id_rsa.pub.
 The key fingerprint is:
-ac:63:ff:c9:67:8f:c7:b7:26:63:77:83:bd:bf:51:be tanqiseng@gmail.com
+ac:63:ff:c9:67:8f:c7:b7:26:43:77:83:bd:ef:11:be username@gmail.com
 The key's randomart image is:
 +--[ RSA 2048]----+
 |                 |
@@ -166,22 +166,19 @@ $ bundle install
 
 $ rake install # Install the default Octopress theme
 </code></pre></li>
-<li><p>配置你本地的octopress</p>
-
-<ul>
-<li>创建github repo，名称<code>username.github.com</code></li>
+<li><p>配置你本地的octopress</p></li>
+<li><p>创建github repo，名称<code>username.github.com</code></p></li>
 <li><p>配置octopress使之与<code>username.github.com</code>关联</p>
 
 <pre><code>$ cd octopress
 $ rake setup_github_pages
   Enter the read/write url for your repository
-  (For example, 'git@github.com:your_username/your_username.github.com)
+  (For example, 'git@github.com:your_username/your_username.github.com')
   Repository url: &lt;git@github.com:yourname/yourname.github.com&gt;
 </code></pre>
 
-<p>以上执行后会要求 read/write url for repository ：</br> git@github.com:yourname/yourname.github.com.git</p></li>
-</ul>
-</li>
+<p>以上执行后会要求 read/write url for repository ： </br>
+git@github.com:yourname/yourname.github.com.git</p></li>
 <li><p>初始化github</p>
 
 <pre><code>$ rake generate
@@ -201,26 +198,24 @@ $ git push origin source
 <p>日后有 Octopress 新版本发布，使用以下指令升级。</p>
 
 <pre><code>$ git pull octopress master     # Get the latest Octopress
-$ bundle install                      # Keep gems updated
+$ bundle install                # Keep gems updated
 $ rake update_source            # update the template's source
-$ rake update_style               # update the template's style
+$ rake update_style             # update the template's style
 </code></pre></li>
-<li><p>编写并发布文章</p>
-
-<ul>
+<li><p>编写并发布文章</p></li>
 <li><p>发表新文章：</p>
 
 <pre><code>$ rake new_post["文章名称"]
 </code></pre>
 
 <p>该命令会在你的”octopress/source/_posts”目录下生成对应的”.markdown”文件，用任意文本编辑器编辑，使用markdown语法编写你的文章。</p></li>
-<li><p>预览：</p>
-
-<pre><code>$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
-</code></pre></li>
 <li><p>生成：</p>
 
 <pre><code>$ rake generate # generate your blog static pages content according to your input. 
+</code></pre></li>
+<li><p>预览：</p>
+
+<pre><code>$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
 </code></pre></li>
 <li><p>发布：</p>
 
@@ -230,8 +225,6 @@ $ rake update_style               # update the template's style
 
 <pre><code>$ rake gen_deploy
 </code></pre></li>
-</ul>
-</li>
 </ol>
 
 </div>
@@ -254,7 +247,7 @@ $ rake update_style               # update the template's style
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">GitHub+Octopress搭建免费blog</a>
+        <a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">Github Plus Octopressda Jian Mian Fei Blog</a>
       </li>
     
   </ul>
