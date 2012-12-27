@@ -5,8 +5,8 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>GitHub+Octopress搭建免费blog - My Octopress Blog</title>
-  <meta name="author" content="Your Name">
+  <title>GitHub+Octopress搭建免费blog - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
 
   
   <meta name="description" content="生成github公钥 检查ssh公钥设置： 如果id_rsa*文件不存在，跳到第三步； $ cd .ssh
@@ -27,7 +27,7 @@ $ rm id_rsa* &hellip;">
   <script src="/javascripts/modernizr-2.0.js"></script>
   <script src="/javascripts/ender.js"></script>
   <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <link href="/atom.xml" rel="alternate" title="My Octopress Blog" type="application/atom+xml">
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
   <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
 <link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
@@ -38,9 +38,9 @@ $ rm id_rsa* &hellip;">
 
 <body   >
   <header role="banner"><hgroup>
-  <h1><a href="/">My Octopress Blog</a></h1>
+  <h1><a href="/">Cooper's Blog</a></h1>
   
-    <h2>A blogging framework for hackers.</h2>
+    <h2>Living without an aim is like sailing without a compass.</h2>
   
 </hgroup>
 
@@ -177,29 +177,13 @@ $ rake setup_github_pages
 </code></pre></li>
 </ul>
 </li>
-
-<li><p>建立并发布blog</p>
-<pre><code>$ rake generate
-$ rake deploy
-</code></pre></li>
-
-<li><p>将 source 也加入git</p>
+<li><p>初始化github repo</p>
 
 <pre><code>$ cd octopress
 $ git add .
 $ git commit -m 'your message'
 $ git push origin source
 </code></pre></li>
-
-<li><p>更新 Octopress</p>
-<p>日后有 Octopress 新版本发布，使用以下指令升级</p>
-<pre><code>$ git pull octopress master     # Get the latest Octopress
-$ bundle install                      # Keep gems updated
-$ rake update_source            # update the template's source
-$ rake update_style               # update the template's style
-</code></pre>
-</li>
-
 <li><p>编写并发布文章</p>
 
 <ul>
@@ -229,7 +213,7 @@ $ rake deploy # push your static pages content to your github pages repo ("maste
       
   
 
-<span class="byline author vcard">Posted by <span class="fn">Your Name</span></span>
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
 
       
 
@@ -292,7 +276,7 @@ $ rake deploy # push your static pages content to your github pages repo ("maste
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2012 - Your Name -
+  Copyright &copy; 2012 - tanqisen -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
