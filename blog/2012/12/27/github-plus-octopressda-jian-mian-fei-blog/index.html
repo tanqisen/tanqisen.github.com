@@ -174,32 +174,55 @@ $ rake setup_github_pages
   Enter the read/write url for your repository
   (For example, 'git@github.com:your_username/your_username.github.com)
   Repository url: &lt;git@github.com:yourname/yourname.github.com&gt;
-</code></pre></li>
+</code></pre>
+
+<p>以上执行后会要求 read/write url for repository ：</br> git@github.com:yourname/yourname.github.com.git</p></li>
 </ul>
 </li>
-<li><p>初始化github repo</p>
+<li><p>初始化github</p>
+
+<pre><code>$ rake generate
+$ rake deploy
+</code></pre>
+
+<p>等待几分钟后，github上会收到一封信：“[yourname.github.com] Page build successful”，第一次发布后等比较久，之后每次都会直接更新</p></li>
+<li><p>将 source 也加入 git</p>
 
 <pre><code>$ cd octopress
 $ git add .
 $ git commit -m 'your message'
 $ git push origin source
 </code></pre></li>
+<li><p>更新 Octopress</p>
+
+<p>日后有 Octopress 新版本发布，使用以下指令升级。</p>
+
+<pre><code>$ git pull octopress master     # Get the latest Octopress
+$ bundle install                      # Keep gems updated
+$ rake update_source            # update the template's source
+$ rake update_style               # update the template's style
+</code></pre></li>
 <li><p>编写并发布文章</p>
 
 <ul>
-<li><p>写文章</p>
+<li><p>发表新文章：</p>
 
-<pre><code>$ cd your_local_octopress_directory
-$ rake new_post["Your Title of Your Article"]
+<pre><code>$ rake new_post["文章名称"]
 </code></pre>
 
 <p>该命令会在你的”octopress/source/_posts”目录下生成对应的”.markdown”文件，用任意文本编辑器编辑，使用markdown语法编写你的文章。</p></li>
-<li><p>生成，预览并发布：</p>
+<li><p>预览：</p>
 
-<pre><code>$ cd your_local_octopress_directory
-$ rake generate # generate your blog static pages content according to your input. 
-$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
-$ rake deploy # push your static pages content to your github pages repo ("master" branch)
+<pre><code>$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
+</code></pre></li>
+<li><p>生成：</p>
+
+<pre><code>$ rake generate # generate your blog static pages content according to your input. 
+$ rake gen_deploy
+</code></pre></li>
+<li><p>发布：</p>
+
+<pre><code>$ rake deploy # push your static pages content to your github pages repo ("master" branch)
 </code></pre></li>
 </ul>
 </li>
