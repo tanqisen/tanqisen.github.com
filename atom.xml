@@ -4,7 +4,7 @@
   <title><![CDATA[Cooper's Blog]]></title>
   <link href="http://tanqisen.github.com/atom.xml" rel="self"/>
   <link href="http://tanqisen.github.com/"/>
-  <updated>2012-12-27T21:04:30+08:00</updated>
+  <updated>2012-12-27T21:10:32+08:00</updated>
   <id>http://tanqisen.github.com/</id>
   <author>
     <name><![CDATA[tanqisen]]></name>
@@ -143,11 +143,14 @@ $ rake update_style               # update the template's style
 <li><p>生成：</p>
 
 <pre><code>$ rake generate # generate your blog static pages content according to your input. 
-$ rake gen_deploy
 </code></pre></li>
 <li><p>发布：</p>
 
 <pre><code>$ rake deploy # push your static pages content to your github pages repo ("master" branch)
+</code></pre></li>
+<li><p>生成并发布：</p>
+
+<pre><code>$ rake gen_deploy
 </code></pre></li>
 </ul>
 </li>
