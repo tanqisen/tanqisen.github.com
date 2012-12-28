@@ -2,10 +2,10 @@
 #      Main Configs       #
 # ----------------------- #
 
-url: http://yoursite.com
-title: My Octopress Blog
-subtitle: A blogging framework for hackers.
-author: Your Name
+url: http://tanqisen.github.com
+title: "Cooper's Blog"
+subtitle: Living without an aim is like sailing without a compass.
+author: tanqisen
 simple_search: http://google.com/search
 description:
 

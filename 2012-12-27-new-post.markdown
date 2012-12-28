@@ -1,0 +1,97 @@
+## 生成github公钥 ##
+
+1.  检查ssh公钥设置：
+
+    如果id_rsa*文件不存在，跳到第三步；
+    
+        $ cd .ssh
+        $ ls
+
+2.  备份原理的ssh key：
+
+    备份旧数据，备份后删除旧数据；
+    
+        $ mkdir key_backup
+        $ cp id_rsa* key_backup
+        $ rm id_rsa*
+
+3.  生成github ssh key：
+
+        $ ssh-keygen -t rsa -C "id@youremail.com" <github 帐号>
+        Generating public/private rsa key pair.
+        Enter file in which to save the key (/Users/your_user_directory/.ssh/id_rsa):<回车就好>
+
+    然后系统会要你输入加密串
+
+        Enter passphrase (empty for no passphrase):<github密码>
+        Enter same passphrase again:<再次输入密码>
+
+    最后看到下面信息就成功了
+
+        Your identification has been saved in /Users/tanqisen/.ssh/id_rsa.
+        Your public key has been saved in /Users/tanqisen/.ssh/id_rsa.pub.
+        The key fingerprint is:
+        ac:63:ff:c9:67:8f:c7:b7:26:63:77:83:bd:bf:51:be tanqiseng@gmail.com
+        The key's randomart image is:
+        +--[ RSA 2048]----+
+        |                 |
+        |                 |
+        |                 |
+        |       .         |
+        |        S       .|
+        |       .       ..|
+        |      +      .o..|
+        |     . o . .o*o==|
+        |        ..+ooo*EO|
+        +-----------------+ 
+
+4.  添加ssh key到github：
+
+    复制id_rsa.pub的内容到github `Account Settings` -> `SSH Keys` -> `add SSH Key` -> `Key`
+
+## 在github上使用octopress ##
+
+1.  在你本地安装octopress
+    
+        $ git clone git://github.com/imathis/octopress.git octopress
+        $ cd octopress    # If you use RVM, You'll be asked if you trust the .rvmrc file (say yes).
+        $ ruby --version  # Should report Ruby 1.9.2
+
+        $ gem install bundler # Install dependencies
+        $ bundle install
+
+        $ rake install # Install the default Octopress theme
+
+2.  配置你本地的octopress
+
+    - 创建github repo，名称`username.github.com`
+    - 配置octopress使之与`username.github.com`关联
+
+          $ cd octopress
+          $ rake setup_github_pages
+            Enter the read/write url for your repository
+            (For example, 'git@github.com:your_username/your_username.github.com)
+            Repository url: <git@github.com:yourname/yourname.github.com>
+
+3.  初始化github repo
+
+        $ cd octopress
+        $ git add .
+        $ git commit -m 'your message'
+        $ git push origin source
+
+4.  编写并发布文章
+
+    - 写文章
+
+          $ cd your_local_octopress_directory
+          $ rake new_post["Your Title of Your Article"]
+
+      该命令会在你的”octopress/source/_posts”目录下生成对应的”.markdown”文件，用任意文本编辑器编辑，使用markdown语法编写你的文章。
+
+    - 生成，预览并发布：
+
+          $ cd your_local_octopress_directory
+          $ rake generate # generate your blog static pages content according to your input. 
+          $ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
+          $ rake deploy # push your static pages content to your github pages repo ("master" branch)
