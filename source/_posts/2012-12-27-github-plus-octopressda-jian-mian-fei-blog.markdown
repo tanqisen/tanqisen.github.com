@@ -1,3 +1,11 @@
+---                                                                                                        
+layout: post
+title: "GitHub+Octopress搭建免费blog" 
+date: 2012-12-27 11:45
+comments: true
+categories: 
+---
+
 ## 生成github公钥 ##
 
 1.  检查ssh公钥设置：
