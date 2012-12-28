@@ -4,7 +4,7 @@
   <title><![CDATA[Cooper's Blog]]></title>
   <link href="http://tanqisen.github.com/atom.xml" rel="self"/>
   <link href="http://tanqisen.github.com/"/>
-  <updated>2012-12-27T23:31:08+08:00</updated>
+  <updated>2012-12-28T11:47:27+08:00</updated>
   <id>http://tanqisen.github.com/</id>
   <author>
     <name><![CDATA[tanqisen]]></name>
@@ -14,9 +14,9 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Github Plus Octopressda Jian Mian Fei Blog]]></title>
+    <title type="html"><![CDATA[GitHub+Octopress搭建免费blog]]></title>
     <link href="http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/"/>
-    <updated>2012-12-27T00:00:00+08:00</updated>
+    <updated>2012-12-27T11:45:00+08:00</updated>
     <id>http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog</id>
     <content type="html"><![CDATA[<h2>生成github公钥</h2>
 
