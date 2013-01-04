@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>GitHub+Octopress搭建免费blog - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="生成github公钥 检查ssh公钥设置： 如果id_rsa*文件不存在，跳到第三步； $ cd .ssh
+$ ls 备份原来的ssh key： 备份旧数据，备份后删除旧数据； $ mkdir key_backup
+$ cp id_rsa* key_backup
+$ rm id_rsa* &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>Living without an aim is like sailing without a compass.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">GitHub+Octopress搭建免费blog</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-27T11:45:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>生成github公钥</h2>
+
+<ol>
+<li><p>检查ssh公钥设置：</p>
+
+<p>如果id_rsa*文件不存在，跳到第三步；</p>
+
+<pre><code>$ cd .ssh
+$ ls
+</code></pre></li>
+<li><p>备份原来的ssh key：</p>
+
+<p>备份旧数据，备份后删除旧数据；</p>
+
+<pre><code>$ mkdir key_backup
+$ cp id_rsa* key_backup
+$ rm id_rsa*
+</code></pre></li>
+<li><p>生成github ssh key：</p>
+
+<pre><code>$ ssh-keygen -t rsa -C "id@youremail.com" &lt;github 帐号&gt;
+Generating public/private rsa key pair.
+Enter file in which to save the key (/Users/your_user_directory/.ssh/id_rsa):&lt;回车就好&gt;
+</code></pre>
+
+<p>然后系统会要你输入加密串</p>
+
+<pre><code>Enter passphrase (empty for no passphrase):&lt;github密码&gt;
+Enter same passphrase again:&lt;再次输入密码&gt;
+</code></pre>
+
+<p>最后看到下面信息就成功了</p>
+
+<pre><code>Your identification has been saved in /Users/xxx/.ssh/id_rsa.
+Your public key has been saved in /Users/xxx/.ssh/id_rsa.pub.
+The key fingerprint is:
+ac:63:ff:c9:67:8f:c7:b7:26:43:77:83:bd:ef:11:be username@gmail.com
+The key's randomart image is:
++--[ RSA 2048]----+
+|                 |
+|                 |
+|                 |
+|       .         |
+|        S       .|
+|       .       ..|
+|      +      .o..|
+|     . o . .o*o==|
+|        ..+ooo*EO|
++-----------------+ 
+</code></pre></li>
+<li><p>添加ssh key到github：</p>
+
+<p>复制id_rsa.pub的内容到github <code>Account Settings</code> -> <code>SSH Keys</code> -> <code>add SSH Key</code> -> <code>Key</code></p></li>
+</ol>
+
+
+<h2>在github上使用octopress</h2>
+
+<ol>
+<li><p>在你本地安装octopress</p>
+
+<pre><code>$ git clone git://github.com/imathis/octopress.git octopress
+$ cd octopress    # If you use RVM, You'll be asked if you trust the .rvmrc file (say yes).
+$ ruby --version  # Should report Ruby 1.9.2
+
+$ gem install bundler # Install dependencies
+$ bundle install
+
+$ rake install # Install the default Octopress theme
+</code></pre></li>
+<li><p>配置你本地的octopress</p>
+
+<ul>
+<li><p>创建github repo，名称<code>username.github.com</code></p></li>
+<li><p>配置octopress使之与<code>username.github.com</code>关联</p>
+
+<pre><code>$ cd octopress
+$ rake setup_github_pages
+  Enter the read/write url for your repository
+  (For example, 'git@github.com:your_username/your_username.github.com')
+  Repository url: &lt;git@github.com:yourname/yourname.github.com&gt;
+</code></pre></li>
+</ul>
+
+
+<p>以上执行后会要求 read/write url for repository ： </br>
+git@github.com:yourname/yourname.github.com.git</p></li>
+<li><p>初始化github</p>
+
+<pre><code>$ rake generate
+$ rake deploy
+</code></pre>
+
+<p>等待几分钟后，github上会收到一封信：“[yourname.github.com] Page build successful”，第一次发布后等比较久，之后每次都会直接更新</p></li>
+<li><p>将 source 也加入 git</p>
+
+<pre><code>$ cd octopress
+$ git add .
+$ git commit -m 'your message'
+$ git push origin source
+</code></pre></li>
+<li><p>更新 Octopress</p>
+
+<p>日后有 Octopress 新版本发布，使用以下指令升级。</p>
+
+<pre><code>$ git pull octopress master     # Get the latest Octopress
+$ bundle install                # Keep gems updated
+$ rake update_source            # update the template's source
+$ rake update_style             # update the template's style
+</code></pre></li>
+<li><p>编写并发布文章</p>
+
+<ul>
+<li><p>发表新文章：</p>
+
+<pre><code>$ rake new_post["文章名称"]
+</code></pre>
+
+<p>该命令会在你的”octopress/source/_posts”目录下生成对应的”.markdown”文件，用任意文本编辑器编辑，使用markdown语法编写你的文章。</p></li>
+<li><p>生成：</p>
+
+<pre><code>$ rake generate # generate your blog static pages content according to your input. 
+</code></pre></li>
+<li><p>预览：</p>
+
+<pre><code>$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
+</code></pre></li>
+<li><p>发布：</p>
+
+<pre><code>$ rake deploy # push your static pages content to your github pages repo ("master" branch)
+</code></pre></li>
+<li><p>生成并发布：</p>
+
+<pre><code>$ rake gen_deploy
+</code></pre></li>
+</ul>
+</li>
+</ol>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-27T11:45:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/" data-via="" data-counturl="http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">GitHub+Octopress搭建免费blog</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/';
+        var disqus_url = 'http://tanqisen.github.com/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
