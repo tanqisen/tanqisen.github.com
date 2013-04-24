@@ -3,6 +3,7 @@ layout: post
 title: "正确使用Block避免Cycle Retain和Crash"
 date: 2013-04-19 11:03
 comments: true
+categories: iOS
 categories: 
 ---
 
@@ -160,6 +161,31 @@ printf("%d\n", base);
 
 * Block变量，被`__block`修饰的变量称作Block变量。
 基本类型的Block变量等效于全局变量、或静态变量。
+
+##### Block被另一个Block使用时，另一个Block被copy到堆上时，被使用的Block也会被copy。但作为参数的Block是不会发生copy的。
+{% codeblock lang:objc %}
+void foo() {
+  int base = 100;
+  BlkSum blk = ^ long (int a, int b) {
+    return  base + a + b;
+  };
+  NSLog(@"%@", blk); // <__NSStackBlock__: 0xbfffdb40>
+  bar(blk);
+}
+
+void bar(BlkSum sum_blk) {
+  NSLog(@"%@",sum_blk); // 与上面一样，说明作为参数传递时，并不会发生copy
+    
+  void (^blk) (BlkSum) = ^ (BlkSum sum) {
+    NSLog(@"%@",sum);     // 无论blk在堆上还是栈上，作为参数的Block不会发生copy。
+    NSLog(@"%@",sum_blk); // 当blk copy到堆上时，sum_blk也被copy了一分到堆上上。
+  };
+  blk(sum_blk); // blk在栈上
+
+  blk = [[blk copy] autorelease];
+  blk(sum_blk); // blk在堆上
+}
+{% endcodeblock %}
 
 ##### ObjC对象，不同于基本类型，Block会引起对象的引用计数变化。
 
