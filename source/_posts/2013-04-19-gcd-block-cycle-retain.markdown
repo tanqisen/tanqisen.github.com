@@ -41,7 +41,7 @@ long s = sum(1, 2);
 定义一个实例函数，该函数返回Block：
 
 {% codeblock lang:objc %}
-- (long (^)(int, int) sumBlock {
+- (long (^)(int, int)) sumBlock {
     int base = 100;
     return [[ ^ long (int a, int b) {
       return base + a + b;
@@ -191,7 +191,7 @@ void bar(BlkSum sum_blk) {
 
 先看下面代码
 {% codeblock lang:objc %}
-@interface MyClass() {
+@interface MyClass : NSObject {
     NSObject* _instanceObj;
 }
 @end
@@ -231,6 +231,15 @@ NSObject* __globalObj = nil;
     NSLog(@"%d", [_instanceObj retainCount]);
     NSLog(@"%d", [localObj retainCount]);
     NSLog(@"%d", [blockObj retainCount]);
+}
+@end
+
+int main(int argc, char *argv[]) {
+    @autoreleasepool {
+        MyClass* obj = [[[MyClass alloc] init] autorelease];
+        [obj test];
+        return 0;
+    }
 }
 {% endcodeblock %}
 执行结果为`1 1 1 2 1`。
