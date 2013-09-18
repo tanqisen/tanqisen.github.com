@@ -14,6 +14,8 @@ categories: Android
 ### 二、游戏框架
   这是一个典型的贴图游戏，没有复杂的图形变换、动画效果等，你看到的所有效果都是不断移动、替换图片实现的，比如飞机的爆炸效果，就是连续显示几张不同的图片实现的。为了不影响用户交互，比如控制飞机移动，贴图和逻辑控制的工作应该放到一个新的线程中。Android提供了`SurfaceView`类来处理贴图的问题，让`SurfaceView`实现`Runnable`接口并配合`Thread`可以解决在子线程中贴图以及逻辑控制的问题。
 
+<!--more-->
+
 {% codeblock 创建游戏循环 lang:java %}
 public class FlightSurfaceView extends SurfaceView implements Callback, Runnable {
   private Thread th = new Thread(this);
