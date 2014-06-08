@@ -20,7 +20,7 @@ categories: iOS
 
     保存在app bundle、plist等配置文件更不安全，但可以使用隐写术等方式迷惑hackers。有请Lena示范：
 
-    {% img /images/Lena.jpg %}    {% img /images/Lena-secret.jpg %}
+    {% img /images/Lena.jpg 256 256 Lena.jpg %}    {% img /images/Lena-secret.jpg 256 256 Lena-secret.jpg %}
 
     两张图片看起来是一模一样的，但是右边的图片里却夹带了一些其他内容，这就是潜伏在Lena中的密码，用diff工具比较下这两张图片，你会发现不同的地方是右边的图片最后附加了一串字符：`app secret is "abcdefg123456"`。 这里的隐写方式很简单：`cat file >> Lena.jpg`，既不破坏图片原本的信息(或者损失一点点原有信息)，又能附加额外的信息，这就是隐写术的原理。这里只是一个简单的例子，没有人真这么使用。有很多更隐蔽的做法，比如把要隐藏的信息分散到图片的每个像素中，例如RGB888的图片，对红蓝分量最后一个bit位进行修改并不会影响图片的质量(因为人眼对对红蓝不敏感)，这样一个像素(3byte)就可以存储2bit的信息，4个像素(12byte)就可以夹带1byte的信息了。
 
