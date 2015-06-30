@@ -7,7 +7,7 @@ categories: iOS
 categories: 
 ---
 
-> **本文只介绍了MRC时的情况，有些细节不适用于ARC。比如MRC下\_\_block不会增加引用计数，但ARC会，ARC下必须用\_\_weak表明不增加引用计数；ARC下block内存分配机制也与MRC不一样。**
+> **本文只介绍了MRC时的情况，有些细节不适用于ARC。比如MRC下\_\_block不会增加引用计数，但ARC会，ARC下必须用\_\_weak指明不增加引用计数；ARC下block内存分配机制也与MRC不一样。**
 
 ### Block简介
   Block作为C语言的扩展，并不是高新技术，和其他语言的闭包或lambda表达式是一回事。需要注意的是由于Objective-C在iOS中不支持GC机制，使用Block必须自己管理内存，而内存管理正是使用Block坑最多的地方，错误的内存管理
