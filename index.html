@@ -1,0 +1,864 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="很多应用都需要用户登录或者签名认证，这可能需要在客户端保存登录信息、签名密钥、加密算法等。如何保证这些重要信息不被窃取，算法不被破解，这些成为应用开发中很重要的内容，同样也是最容易忽视的地方。一个小小的细节可能就成为整个系统的突破口，这里从实际工程角度总结了一些容易忽视的细节和常用的方法。 ">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>西湖的水，哥的泪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">所有文章</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-06T13:59:00+08:00" pubdate data-updated="true">Jun 6<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>很多应用都需要用户登录或者签名认证，这可能需要在客户端保存登录信息、签名密钥、加密算法等。如何保证这些重要信息不被窃取，算法不被破解，这些成为应用开发中很重要的内容，同样也是最容易忽视的地方。一个小小的细节可能就成为整个系统的突破口，这里从实际工程角度总结了一些容易忽视的细节和常用的方法。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/06/06/how-to-prevent-app-crack/">阅读 on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T18:31:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="https://github.com/tanqisen/Flight">Android打飞机源码</a></p>
+
+<h3>六、角色和状态接口设计</h3>
+
+<p>角色基本属性有最大生命值、当前生命值、速度、攻击力、角色位置、角色状态等。角色行为有移动、显示、检测是否与别的角色碰撞、被攻击等。状态属于角色内部属性，可将状态设计成内部类的形式，在特定状态下，角色有特定的行为。例如，正常状态下敌机匀速向屏幕底部移动，受伤后敌机会加速移动，爆炸时敌机原地爆炸、不能移动。</p>
+
+<blockquote><p>注意：我这里说的接口并不是java语言的接口，为了方便实现，使用了普通java类。另外属性权限访问也没有严格限制，还需要改进。</p></blockquote>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">阅读 on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T18:31:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p><a href="https://github.com/tanqisen/Flight">Android打飞机源码</a></p>
+
+<h3>一、概述</h3>
+
+<p>  对没有Android开发经验，或对JAVA语言不是太熟悉的同学，希望尝试Android开发应该如何进入呢？为了避免枯燥地看教程、阅读官方sample，学习一大堆不知道什么时候会用上的API，我选择打飞机这个游戏作为切入点。一是因为开发简单游戏并不会涉及过多的平台API以及平台特性，只需要知道基本的贴图、多线程、用户交互等接口就足够了；二是可以把更多的精力放到熟悉语言、培养语感，当然还有游戏本身的逻辑，以及程序设计的通用模式；三是自己动手开发更有趣味性，所以开发中并没有使用游戏框架如cocos2d-x等，仅仅使用了一些Android原始API，毕竟只是为了学习。</p>
+
+<h3>二、游戏框架</h3>
+
+<p>  这是一个典型的贴图游戏，没有复杂的图形变换、动画效果等，你看到的所有效果都是不断移动、替换图片实现的，比如飞机的爆炸效果，就是连续显示几张不同的图片实现的。为了不影响用户交互，比如控制飞机移动，贴图和逻辑控制的工作应该放到一个新的线程中。Android提供了<code>SurfaceView</code>类来处理贴图的问题，让<code>SurfaceView</code>实现<code>Runnable</code>接口并配合<code>Thread</code>可以解决在子线程中贴图以及逻辑控制的问题。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">阅读 on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-19T11:03:00+08:00" pubdate data-updated="true">Apr 19<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote><p>本文只讨论了MRC时的情况，ARC下略有不同</p></blockquote>
+
+<h3>Block简介</h3>
+
+<p>  Block作为C语言的扩展，并不是高新技术，和其他语言的闭包或lambda表达式是一回事。需要注意的是由于Objective-C在iOS中不支持GC机制，使用Block必须自己管理内存，而内存管理正是使用Block坑最多的地方，错误的内存管理
+要么导致return cycle内存泄漏要么内存被提前释放导致crash。
+Block的使用很像函数指针，不过与函数最大的不同是：Block可以访问函数以外、词法作用域以内的外部变量的值。换句话说，Block不仅
+实现函数的功能，还能携带函数的执行环境。</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/04/19/gcd-block-cycle-retain/">阅读 on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-27T16:25:00+08:00" pubdate data-updated="true">Feb 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h3>1.  push原理</h3>
+
+<p><strong>iOS push 工作机制可以用下图简要概括</strong></p>
+
+<p><img src="/images/ios_push.jpg"></p>
+
+<ul>
+<li><code>Provider</code>:应用自己的服务器；</li>
+<li><code>APNS</code>:Apple Push Notification Service的简称，苹果的PUSH服务器；</li>
+</ul>
+
+
+<p><strong>push的主要工作流程是：</strong></p>
+
+<ul>
+<li>iOS设备连接网络后，会自动与APNS保持类似TCP的长链接，等待APNS推送消息的到来；</li>
+<li>应用启动时注册消息推送，并获取设备的在APNS中注册的唯一设备标示deviceToken上传给应用服务器(即Provider)；</li>
+<li>在需要给应用推送消息时，Provider把push内容、接收push消息的deviceToken按APNS指定的格式打包好，发送给APNS；</li>
+<li>APNS收到Provider发送的消息后，查找deviceToken指定的设备，如果该设备已经和APNS建立了连接，则立即将消息推送给该设备，如果设备不在线，则在该设备下次连接到APNS后将消息推送到设备。请注意苹果并不保证推送一定成功；</li>
+<li>设备收到push消息后，iOS系统会根据SSL证书判断这个push消息是发给那个应用的，进而启动相应客户端。</li>
+</ul>
+
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2013/02/27/ios-push-apns/">阅读 on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2013/01/13/vim-search-replace-regex/">Vim查找替换及正则表达式的使用</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-13T22:18:00+08:00" pubdate data-updated="true">Jan 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h3>简单替换表达式</h3>
+
+<p>  <code>
+  :[range]s/from/to/[flags]
+ </code></p>
+
+<ul>
+<li><p><code>range</code>:搜索范围，如果没有指定范围，则作用于但前行。</p>
+
+<ol>
+<li><code>:1,10s/from/to/</code> 表示在第1到第10行（包含第1，第10行）之间搜索替换；</li>
+<li><code>:10s/from/to/</code> 表示只在第10行搜索替换；</li>
+<li><code>:%s/from/to/</code> 表示在所有行中搜索替换；</li>
+<li><code>1,$s/from/to/</code> 同上。</li>
+</ol>
+</li>
+<li><p><code>flags</code> 有如下四个选项：</p>
+
+<ol>
+<li><code>c</code> confirm，每次替换前询问；</li>
+<li><code>e</code> error， 不显示错误；</li>
+<li><code>g</code> globle，不询问，整行替换。如果不加<code>g</code>选项，则只替换每行的第一个匹配到的字符串；</li>
+<li><code>i</code> ignore，忽略大小写。</li>
+</ol>
+
+
+<p>这些选项可以合并使用，如<code>cgi</code>表示不区分大小写，整行替换，替换前询问。</p></li>
+</ul>
+
+
+<h3>正则表达式</h3>
+
+<ol>
+<li><p>元字符</p>
+
+<ul>
+<li><p>元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> .      </td>
+<td align="left"> 匹配任意字符</td>
+</tr>
+<tr>
+<td align="center"> [abc]  </td>
+<td align="left"> 匹配方括号中的任意一个字符，可用<code>-</code>表示字符范围。如[a-z0-9]匹配小写字母和数字</td>
+</tr>
+<tr>
+<td align="center"> [&#94;abc] </td>
+<td align="left"> 匹配除方括号中字符之外的任意字符</td>
+</tr>
+<tr>
+<td align="center"> \d     </td>
+<td align="left"> 匹配阿拉伯数字，等同于[0-9]</td>
+</tr>
+<tr>
+<td align="center"> \D     </td>
+<td align="left"> 匹配阿拉伯数字之外的任意字符，等同于[&#94;0-9]</td>
+</tr>
+<tr>
+<td align="center"> \x     </td>
+<td align="left"> 匹配十六进制数字，等同于[0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \X     </td>
+<td align="left"> 匹配十六进制数字之外的任意字符，等同于[&#94;0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \l     </td>
+<td align="left"> 匹配[a-z]</td>
+</tr>
+<tr>
+<td align="center"> \L     </td>
+<td align="left"> 匹配[&#94;a-z]</td>
+</tr>
+<tr>
+<td align="center"> \u     </td>
+<td align="left"> 匹配[A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \U     </td>
+<td align="left"> 匹配[&#94;A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \w     </td>
+<td align="left"> 匹配单词字母，等同于[0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \W     </td>
+<td align="left"> 匹配单词字母之外的任意字符，等同于[&#94;0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \t     </td>
+<td align="left"> 匹配<code>&lt;TAB&gt;</code>字符</td>
+</tr>
+<tr>
+<td align="center"> \s     </td>
+<td align="left"> 匹配空白字符，等同于[\t]</td>
+</tr>
+<tr>
+<td align="center"> \S     </td>
+<td align="left"> 匹配非空白字符，等同于[&#94;\t]</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>一些普通字符需转意</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> \*   </td>
+<td align="left"> 匹配<code>*</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> &#46;   </td>
+<td align="left"> 匹配<code>.</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \/   </td>
+<td align="left"> 匹配 <code>/</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> &#92;   </td>
+<td align="left"> 匹配 <code>\</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \[   </td>
+<td align="left"> 匹配 <code>[</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \]   </td>
+<td align="left"> 匹配 <code>]</code> 字符</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>表示数量的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">*     </td>
+<td align="left"> 匹配0-任意个</td>
+</tr>
+<tr>
+<td align="center">\+    </td>
+<td align="left"> 匹配1-任意个</td>
+</tr>
+<tr>
+<td align="center">\?    </td>
+<td align="left"> 匹配0-1个</td>
+</tr>
+<tr>
+<td align="center">\{n,m}</td>
+<td align="left"> 匹配n-m个</td>
+</tr>
+<tr>
+<td align="center">\{n}  </td>
+<td align="left"> 匹配n个</td>
+</tr>
+<tr>
+<td align="center">\{n,} </td>
+<td align="left"> 匹配n-任意个</td>
+</tr>
+<tr>
+<td align="center">\{,m} </td>
+<td align="left"> 匹配0-m个</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+<li><p>表示位置的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">$      </td>
+<td align="left"> 匹配行尾</td>
+</tr>
+<tr>
+<td align="center">&#94;  </td>
+<td align="left"> 匹配行首</td>
+</tr>
+<tr>
+<td align="center">\&lt;    </td>
+<td align="left"> 匹配单词词首</td>
+</tr>
+<tr>
+<td align="center">\>    </td>
+<td align="left"> 匹配单词词尾</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+</ul>
+</li>
+<li><p>替换变量</p>
+
+<p>在正则式中以<code>\(</code>和<code>\)</code>括起来的正则表达式，在后面使用的时候可以用<code>\1</code>、<code>\2</code>等变量来访问<code>\(</code>和<code>\)</code>中的内容。</p></li>
+</ol>
+
+
+<h3>例子</h3>
+
+<ol>
+<li>删除行尾空格：<code>:%s/\s+$//g</code></li>
+<li>删除行首多余空格：<code>%s/^\s*//</code> 或者 <code>%s/^ *//</code></li>
+<li>删除沒有內容的空行：<code>%s/^$//</code> 或者 <code>g/^$/d</code></li>
+<li>删除包含有空格组成的空行：<code>%s/^\s*$//</code> 或者 <code>g/^\s*$/d</code></li>
+<li>删除以空格或TAB开头到结尾的空行：<code>%s/^[ |\t]*$//</code> 或者 <code>g/^[ |\t]*$/d</code></li>
+<li><p>把文中的所有字符串“abc……xyz”替换为“xyz……abc”可以有下列写法</p>
+
+<pre><code>:%s/abc\(.*\)xyz/xyz\1abc/g
+:%s/\(abc\)\(.*\)\(xyz\)/\3\2\1/g
+</code></pre></li>
+</ol>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/">GitHub+Octopress搭建免费blog</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-27T11:45:00+08:00" pubdate data-updated="true">Dec 27<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h2>生成github公钥</h2>
+
+<ol>
+<li><p>检查ssh公钥设置：</p>
+
+<p>如果id_rsa*文件不存在，跳到第三步；</p>
+
+<pre><code>$ cd .ssh
+$ ls
+</code></pre></li>
+<li><p>备份原来的ssh key：</p>
+
+<p>备份旧数据，备份后删除旧数据；</p>
+
+<pre><code>$ mkdir key_backup
+$ cp id_rsa* key_backup
+$ rm id_rsa*
+</code></pre></li>
+<li><p>生成github ssh key：</p>
+
+<pre><code>$ ssh-keygen -t rsa -C "id@youremail.com" &lt;github 帐号&gt;
+Generating public/private rsa key pair.
+Enter file in which to save the key (/Users/your_user_directory/.ssh/id_rsa):&lt;回车就好&gt;
+</code></pre>
+
+<p>然后系统会要你输入加密串</p>
+
+<pre><code>Enter passphrase (empty for no passphrase):&lt;github密码&gt;
+Enter same passphrase again:&lt;再次输入密码&gt;
+</code></pre>
+
+<p>最后看到下面信息就成功了</p>
+
+<pre><code>Your identification has been saved in /Users/xxx/.ssh/id_rsa.
+Your public key has been saved in /Users/xxx/.ssh/id_rsa.pub.
+The key fingerprint is:
+ac:63:ff:c9:67:8f:c7:b7:26:43:77:83:bd:ef:11:be username@gmail.com
+The key's randomart image is:
++--[ RSA 2048]----+
+|                 |
+|                 |
+|                 |
+|       .         |
+|        S       .|
+|       .       ..|
+|      +      .o..|
+|     . o . .o*o==|
+|        ..+ooo*EO|
++-----------------+ 
+</code></pre></li>
+<li><p>添加ssh key到github：</p>
+
+<p>复制id_rsa.pub的内容到github <code>Account Settings</code> -> <code>SSH Keys</code> -> <code>add SSH Key</code> -> <code>Key</code></p></li>
+</ol>
+
+
+<h2>在github上使用octopress</h2>
+
+<ol>
+<li><p>在你本地安装octopress</p>
+
+<pre><code>$ git clone git://github.com/imathis/octopress.git octopress
+$ cd octopress    # If you use RVM, You'll be asked if you trust the .rvmrc file (say yes).
+$ ruby --version  # Should report Ruby 1.9.2
+
+$ gem install bundler # Install dependencies
+$ bundle install
+
+$ rake install # Install the default Octopress theme
+</code></pre></li>
+<li><p>配置你本地的octopress</p>
+
+<ul>
+<li><p>创建github repo，名称<code>username.github.com</code></p></li>
+<li><p>配置octopress使之与<code>username.github.com</code>关联</p>
+
+<pre><code>$ cd octopress
+$ rake setup_github_pages
+  Enter the read/write url for your repository
+  (For example, 'git@github.com:your_username/your_username.github.com')
+  Repository url: &lt;git@github.com:yourname/yourname.github.com&gt;
+</code></pre></li>
+</ul>
+
+
+<p>以上执行后会要求 read/write url for repository ： </br>
+git@github.com:yourname/yourname.github.com.git</p></li>
+<li><p>初始化github</p>
+
+<pre><code>$ rake generate
+$ rake deploy
+</code></pre>
+
+<p>等待几分钟后，github上会收到一封信：“[yourname.github.com] Page build successful”，第一次发布后等比较久，之后每次都会直接更新</p></li>
+<li><p>将 source 也加入 git</p>
+
+<pre><code>$ cd octopress
+$ git add .
+$ git commit -m 'your message'
+$ git push origin source
+</code></pre></li>
+<li><p>更新 Octopress</p>
+
+<p>日后有 Octopress 新版本发布，使用以下指令升级。</p>
+
+<pre><code>$ git pull octopress master     # Get the latest Octopress
+$ bundle install                # Keep gems updated
+$ rake update_source            # update the template's source
+$ rake update_style             # update the template's style
+</code></pre></li>
+<li><p>编写并发布文章</p>
+
+<ul>
+<li><p>发表新文章：</p>
+
+<pre><code>$ rake new_post["文章名称"]
+</code></pre>
+
+<p>该命令会在你的”octopress/source/_posts”目录下生成对应的”.markdown”文件，用任意文本编辑器编辑，使用markdown语法编写你的文章。</p></li>
+<li><p>生成：</p>
+
+<pre><code>$ rake generate # generate your blog static pages content according to your input. 
+</code></pre></li>
+<li><p>预览：</p>
+
+<pre><code>$ rake preview # start a web server on "http://localhost:4000", you can preview your blog content.
+</code></pre></li>
+<li><p>发布：</p>
+
+<pre><code>$ rake deploy # push your static pages content to your github pages repo ("master" branch)
+</code></pre></li>
+<li><p>生成并发布：</p>
+
+<pre><code>$ rake gen_deploy
+</code></pre></li>
+</ul>
+</li>
+</ol>
+
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+    <a href="/blog/archives">Blog Archives</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

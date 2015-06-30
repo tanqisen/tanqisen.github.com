@@ -1,0 +1,632 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>一步一步实现Android打飞机（一） - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="Android打飞机源码 一、概述 对没有Android开发经验，或对JAVA语言不是太熟悉的同学，希望尝试Android开发应该如何进入呢？为了避免枯燥地看教程、阅读官方sample，学习一大堆不知道什么时候会用上的API，我选择打飞机这个游戏作为切入点。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>西湖的水，哥的泪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">所有文章</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">一步一步实现Android打飞机（一）</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T18:31:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><a href="https://github.com/tanqisen/Flight">Android打飞机源码</a></p>
+
+<h3>一、概述</h3>
+
+<p>  对没有Android开发经验，或对JAVA语言不是太熟悉的同学，希望尝试Android开发应该如何进入呢？为了避免枯燥地看教程、阅读官方sample，学习一大堆不知道什么时候会用上的API，我选择打飞机这个游戏作为切入点。一是因为开发简单游戏并不会涉及过多的平台API以及平台特性，只需要知道基本的贴图、多线程、用户交互等接口就足够了；二是可以把更多的精力放到熟悉语言、培养语感，当然还有游戏本身的逻辑，以及程序设计的通用模式；三是自己动手开发更有趣味性，所以开发中并没有使用游戏框架如cocos2d-x等，仅仅使用了一些Android原始API，毕竟只是为了学习。</p>
+
+<h3>二、游戏框架</h3>
+
+<p>  这是一个典型的贴图游戏，没有复杂的图形变换、动画效果等，你看到的所有效果都是不断移动、替换图片实现的，比如飞机的爆炸效果，就是连续显示几张不同的图片实现的。为了不影响用户交互，比如控制飞机移动，贴图和逻辑控制的工作应该放到一个新的线程中。Android提供了<code>SurfaceView</code>类来处理贴图的问题，让<code>SurfaceView</code>实现<code>Runnable</code>接口并配合<code>Thread</code>可以解决在子线程中贴图以及逻辑控制的问题。</p>
+
+<!--more-->
+
+
+
+
+<figure class='code'><figcaption><span>创建游戏循环  </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">public</span> <span class="kd">class</span> <span class="nc">FlightSurfaceView</span> <span class="kd">extends</span> <span class="n">SurfaceView</span> <span class="kd">implements</span> <span class="n">Callback</span><span class="o">,</span> <span class="n">Runnable</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="n">Thread</span> <span class="n">th</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>  <span class="kd">private</span> <span class="n">SurfaceHolder</span> <span class="n">sfh</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="nf">FlightSurfaceView</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="kd">super</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">this</span><span class="o">.</span><span class="na">setKeepScreenOn</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>    <span class="n">sfh</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">getHolder</span><span class="o">();</span>
+</span><span class='line'>    <span class="n">sfh</span><span class="o">.</span><span class="na">addCallback</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">setFocusable</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">surfaceCreated</span><span class="o">(</span><span class="n">SurfaceHolder</span> <span class="n">holder</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// 开始游戏循环</span>
+</span><span class='line'>    <span class="n">th</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">onTouchEvent</span><span class="o">(</span><span class="n">MotionEvent</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// 主线程事件处理</span>
+</span><span class='line'>    <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>    <span class="c1">// 游戏线程，游戏循环</span>
+</span><span class='line'>    <span class="k">while</span> <span class="o">(</span><span class="kc">true</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>        <span class="c1">// 游戏逻辑控制</span>
+</span><span class='line'>        <span class="n">updateFrame</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// 渲染当前帧</span>
+</span><span class='line'>        <span class="n">renderFrame</span><span class="o">();</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// 休眠当前线程，线程切换</span>
+</span><span class='line'>        <span class="n">Thread</span><span class="o">.</span><span class="na">sleep</span><span class="o">(</span><span class="mi">30</span><span class="o">);</span>
+</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Exception</span> <span class="n">ex</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>      <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">surfaceChanged</span><span class="o">(</span><span class="n">SurfaceHolder</span> <span class="n">holder</span><span class="o">,</span> <span class="kt">int</span> <span class="n">format</span><span class="o">,</span> <span class="kt">int</span> <span class="n">width</span><span class="o">,</span> <span class="kt">int</span> <span class="n">height</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="nd">@Override</span>
+</span><span class='line'>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">surfaceDestroyed</span><span class="o">(</span><span class="n">SurfaceHolder</span> <span class="n">holder</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">updateFrame</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">renderFrame</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这样，一个基本的游戏循环就建立起来了。但这只是一个什么都不做的空循环，我们还得再这里处理游戏逻辑，以及渲染当前帧。我们先看如何渲染图片、文字。</p>
+
+<figure class='code'><figcaption><span>绘图过程  </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">renderFrame</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="n">sfh</span><span class="o">.</span><span class="na">lockCanvas</span><span class="o">();</span> <span class="c1">// 获取并锁定canvas</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">save</span><span class="o">();</span>    <span class="c1">// 保存当前绘图环境</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// TODO 具体绘制</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">restore</span><span class="o">();</span> <span class="c1">// 恢复先前绘图环境</span>
+</span><span class='line'>  <span class="n">sfh</span><span class="o">.</span><span class="na">unlockCanvasAndPost</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span> <span class="c1">// 解锁canvas并绘制</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>具体绘制时，我们还需要一个绘图工具<code>Paint</code>来设置绘制的颜色、字体、样式等参数。</p>
+
+<figure class='code'><figcaption><span>创建 Paint 绘图及游戏简单控制  </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="n">Paint</span> <span class="n">paint</span><span class="o">;</span>
+</span><span class='line'><span class="kd">private</span> <span class="n">Paint</span> <span class="n">textPaint</span><span class="o">;</span>
+</span><span class='line'><span class="kd">private</span> <span class="n">Bitmap</span> <span class="n">bmp</span><span class="o">;</span>
+</span><span class='line'><span class="kd">private</span> <span class="kt">int</span> <span class="n">x</span><span class="o">;</span>
+</span><span class='line'><span class="kd">private</span> <span class="kt">int</span> <span class="n">y</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">public</span> <span class="nf">FlightSurfaceView</span><span class="o">(</span><span class="n">Context</span> <span class="n">context</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>  <span class="kd">super</span><span class="o">(</span><span class="n">context</span><span class="o">);</span>
+</span><span class='line'>  <span class="k">this</span><span class="o">.</span><span class="na">setKeepScreenOn</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'>  <span class="n">sfh</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">getHolder</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">sfh</span><span class="o">.</span><span class="na">addCallback</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">paint</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Paint</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">paint</span><span class="o">.</span><span class="na">setColor</span><span class="o">(</span><span class="n">Color</span><span class="o">.</span><span class="na">WHITE</span><span class="o">);</span>   <span class="c1">// 设置颜色为白色</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">textPaint</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Paint</span><span class="o">();</span>
+</span><span class='line'>  <span class="n">textPaint</span><span class="o">.</span><span class="na">setColor</span><span class="o">(</span><span class="n">Color</span><span class="o">.</span><span class="na">RED</span><span class="o">);</span> <span class="c1">// 设置红色文字画笔</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">bmp</span> <span class="o">=</span> <span class="n">BitmapFactory</span><span class="o">.</span><span class="na">decodeResource</span><span class="o">(</span><span class="n">res</span><span class="o">,</span> <span class="n">R</span><span class="o">.</span><span class="na">drawable</span><span class="o">.</span><span class="na">hero</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">x</span> <span class="o">=</span> <span class="mi">100</span><span class="o">;</span>
+</span><span class='line'>  <span class="n">y</span> <span class="o">=</span> <span class="mi">100</span><span class="o">;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">setFocusable</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 简单的游戏控制，这里每帧向右下移动一次图片</span>
+</span><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">updateFrame</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">x</span> <span class="o">++;</span>
+</span><span class='line'>  <span class="n">y</span> <span class="o">++;</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="n">x</span><span class="o">&gt;</span><span class="mi">320</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="k">if</span> <span class="o">(</span><span class="n">y</span><span class="o">&gt;</span><span class="mi">480</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+</span><span class='line'>  <span class="o">}</span>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">renderFrame</span><span class="o">()</span> <span class="o">{</span>
+</span><span class='line'>  <span class="n">Canvas</span> <span class="n">canvas</span> <span class="o">=</span> <span class="n">sfh</span><span class="o">.</span><span class="na">lockCanvas</span><span class="o">();</span> <span class="c1">// 获取并锁定canvas</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">save</span><span class="o">();</span>    <span class="c1">// 保存当前绘图环境</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// 绘制白色背景</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">drawRect</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">320</span><span class="o">,</span><span class="mi">480</span><span class="o">,</span><span class="n">paint</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// 绘制文字</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">drawText</span><span class="o">(</span><span class="s">&quot;Flight&quot;</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="n">textPaint</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// 绘制图片</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">drawBitmap</span><span class="o">(</span><span class="n">bmp</span><span class="o">,</span> <span class="n">x</span><span class="o">,</span> <span class="n">y</span><span class="o">,</span> <span class="n">paint</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="c1">// 绘制文字</span>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">drawText</span><span class="o">(</span><span class="s">&quot;Flight&quot;</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="n">paint</span><span class="o">);</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">canvas</span><span class="o">.</span><span class="na">restore</span><span class="o">();</span> <span class="c1">// 恢复先前绘图环境</span>
+</span><span class='line'>  <span class="n">sfh</span><span class="o">.</span><span class="na">unlockCanvasAndPost</span><span class="o">(</span><span class="n">canvas</span><span class="o">);</span> <span class="c1">// 解锁canvas并绘制</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>关于Android图形API这里就不详细解释了，后面的内容才是重点。</p>
+
+<h3>三、游戏资源</h3>
+
+<p>游戏中用到的图片、声音等资源可以直接从微信中抠出。这里我使用的是微信iOS版的资源。解开微信安装包，找到了<code>gameArts-hd.png</code>、<code>gameArts-hd.plist</code>、<code>gameArts.png</code>、<code>gameArts.plist</code>两套图片资源，<code>hd</code>是针对高分辨率的一套图，这里我只用了普通的分辨率<code>320x480</code>的资源，一共有两个文件，一个是图片<code>gameArts.png</code>，里面包含所有的精灵贴图，以及爆炸效果等，如图所示：</p>
+
+<p><img src="/images/gamearts.png" width="256" height="512" title="gameArts.png" ></p>
+
+<blockquote><p>gameArts.png图片加载的是需要注意一点是使用<code>Bitmap bmp = BitmapFactory.decodeResource(res, R.raw.gamearts);</code>加载后图片由于Android系统优化，可能改变图片原来的分辨率，导致贴图的时候坐标偏移不对，这里最好使用<code>InputStream is = this.getResources().openRawResource(R.raw.gamearts); bmp = BitmapFactory.decodeStream(is);</code>来加载图片</p></blockquote>
+
+<p>另一个文件是<code>gameArts.plist</code>，里面记录了每个精灵在<code>gameArts.png</code>中的位置以及尺寸等信息。截取gameArts.plist文件的一个片段，解释一下字段含义：</p>
+
+<figure class='code'><figcaption><span>gameArts.plist 片段  </span></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'><span class="s2">&quot;hero_fly_1.png&quot;</span><span class="err">:</span><span class="p">{</span>
+</span><span class='line'>  <span class="nt">&quot;textureRect&quot;</span><span class="p">:</span><span class="s2">&quot;{ {432, 0}, {66, 82} }&quot;</span><span class="p">,</span>   <span class="err">//</span> <span class="err">精灵在图片文件中的位置、大小</span>
+</span><span class='line'>  <span class="nt">&quot;spriteSize&quot;</span><span class="p">:</span><span class="s2">&quot;{66, 82}&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;spriteColorRect&quot;</span><span class="p">:</span><span class="s2">&quot;{ {1, 1}, {66, 82} }&quot;</span><span class="p">,</span> <span class="err">//</span> <span class="err">精灵有效像素的偏移及大小</span>
+</span><span class='line'>  <span class="nt">&quot;spriteTrimmed&quot;</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;aliases&quot;</span><span class="p">:[],</span>
+</span><span class='line'>  <span class="nt">&quot;spriteOffset&quot;</span><span class="p">:</span><span class="s2">&quot;{0, -0}&quot;</span><span class="p">,</span>
+</span><span class='line'>  <span class="nt">&quot;textureRotated&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span> <span class="err">//</span> <span class="err">是否旋转</span>
+</span><span class='line'>  <span class="nt">&quot;spriteSourceSize&quot;</span><span class="p">:</span><span class="s2">&quot;{68, 84}&quot;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这些字段中主要使用了<code>textureRect</code>和<code>spriteColorRect</code>，由于这套图片中的精灵都没有被旋转，所以<code>textureRotated</code>这里不需要。另外由于plist格式在Android中没原生支持，为了解析方便使用的时候将gameArts.plist转成了json格式。</p>
+
+<blockquote><p>可能Android的apk包中的资源跟iOS格式不一样，不过大同小异，只是对文件的解析过程不一样，不影响游戏本身逻辑。可以尝试对不同分辨率载入不同资源。</p></blockquote>
+
+<h3>四、 游戏分析</h3>
+
+<p>先看游戏中的元素，有随机生产的敌机、玩家控制的英雄飞机、发射的子弹、掉落的降落伞等。</p>
+
+<ul>
+<li>英雄：
+
+<ol>
+<li>正常情况下，玩家可以控制其在屏幕范围内任意移动；</li>
+<li>同时英雄会以一定频率自动发射子弹；</li>
+<li>英雄可以持有不同种类的武器；</li>
+<li>英雄在与敌机碰撞之后会爆炸，爆炸后会闪烁几次，然后游戏结束；</li>
+</ol>
+</li>
+<li>敌机：
+
+<ol>
+<li>敌机有小型飞机、中型飞机、大型飞机；</li>
+<li>小飞机再中弹后即刻爆炸；</li>
+<li>中型飞机和大型飞机在受到一定次数攻击后会有预示将要爆炸的闪烁效果；</li>
+<li>如果再继续被攻击到一定次数，敌机就会爆炸；</li>
+<li>敌机被击爆之后，玩家会获取一定分数；</li>
+<li>敌机的移动不需要玩家控制，而是以一定的随机速度向下移动；</li>
+</ol>
+</li>
+<li>子弹：
+
+<ol>
+<li>只有英雄会发射子弹；</li>
+<li>子弹遇到敌机后会攻击敌机；</li>
+<li>同时子弹本身会消失；</li>
+</ol>
+</li>
+<li>降落伞：
+
+<ol>
+<li>降落伞和英雄碰撞后，降落伞闪烁几次后消失；</li>
+<li>同时玩家可以获得降落伞携带的道具，如双倍子弹、炸弹；</li>
+</ol>
+</li>
+</ul>
+
+
+<h4>从上面的描述中，我们至少可以抽象出两个基本概率：</h4>
+
+<ol>
+<li>类似英雄、敌机、子弹等有生命、有攻击力、可以移动等特性的物体，我们可以抽象成游戏中的<code>角色</code>；</li>
+<li><p>游戏角色在不同时刻有不同<code>状态</code>，在<code>不同状态下有不同行为</code>。比如敌机可以在受到攻击后，可以加快速度冲向英雄，也可以处于闪烁状态，预示飞机即将爆炸；进一步对状态分析后发现，可以抽象出如下几种状态：</p>
+
+<ul>
+<li>正常状态：未受到攻击或只是轻微受伤，角色可以正常移动，攻击（对英雄），冲撞对方等；</li>
+<li>被攻击状态：角色受到一定攻击，角色移动速度可能加快，或者带闪烁效果等；</li>
+<li>爆炸状态：此时角色已经被消灭，但还未从屏幕中消失，正在爆炸过程中，此时角色已经没有攻击力，也不能移动了；</li>
+<li>销毁状态：角色完全爆炸完成会进入这个状态，或角色移动出了屏幕范围，如子弹、敌机移出了屏幕范围也相当于被销毁了，此时角色不会显示在屏幕上了，他的生命周期已经结束；</li>
+</ul>
+</li>
+</ol>
+
+
+<blockquote><p>角色在不同时刻处于不同的状态，而且状态是可以转化的，如正常飞行的飞机在受到轻微攻击时可能转换到被攻击状态，但受到较大伤害（如玩家投放炸弹）可能使飞机直接转换到爆炸状态；并不是每个角色都存在这四种状态，如小飞机没有被攻击状态，因为小飞机一但被攻击，会直接爆炸。</p></blockquote>
+
+<p>通过这个分析，我们抽象出了<code>角色</code>和<code>状态</code>，下一步就是开始大致设计这个游戏模块了。</p>
+
+<h3>五、模块划分与程序设计</h3>
+
+<ul>
+<li>首先，游戏资源的加载和管理以及精灵的绘制都与游戏逻辑没直接关系，可以单独设计一个模块；</li>
+<li>另外角色的创建和回收设计成一个专门的模块，回收角色是为了避免不断的创建新对象，如子弹会源源不断的发射出去，我们不可能每发射一颗子弹就创建一个新对象，这将消耗大量的设备资源，对GC的压力非常大，所以需要回收被销毁的角色，如被消灭的敌机、子弹等，回收后下次需要&#8221;创建&#8221;新对象时，我们只需要对回收后的角色初始化后再利用。这个模块还可以控制角色的创建时机。例如用一个固定时间间隔创建新的子弹，或者在一个时间段内随机生成一架敌机等；</li>
+<li>游戏逻辑模块控制角色移动，游戏道具、英雄武器切换、玩家分数、游戏暂停等等；</li>
+</ul>
+
+
+<p>这个简单的模块划分对接下来的编码实现是非常有帮助的。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-13T18:31:00+08:00" pubdate data-updated="true">Sep 13<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/android/'>Android</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/04/19/gcd-block-cycle-retain/" title="Previous Post: 正确使用Block避免Cycle Retain和Crash">&laquo; 正确使用Block避免Cycle Retain和Crash</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/" title="Next Post: 一步一步实现Android打飞机（二）">一步一步实现Android打飞机（二） &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://tanqisen.github.com/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/';
+        var disqus_url = 'http://tanqisen.github.com/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

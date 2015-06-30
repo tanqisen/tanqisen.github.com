@@ -1,0 +1,493 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>vim查找替换及正则表达式的使用 - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="简单替换表达式 :[range]s/from/to/[flags] range:搜索范围，如果没有指定范围，则作用于但前行。 :1,10s/from/to/ 表示在第1到第10行（包含第1，第10行）之间搜索替换；
+:10s/from/to/ 表示只在第10行搜索替换；
+:%s/from/to/ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/blog/2013/01/13/vim-search-replace-regex/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>西湖的水，哥的泪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">所有文章</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Vim查找替换及正则表达式的使用</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-13T22:18:00+08:00" pubdate data-updated="true">Jan 13<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h3>简单替换表达式</h3>
+
+<p>  <code>
+  :[range]s/from/to/[flags]
+ </code></p>
+
+<ul>
+<li><p><code>range</code>:搜索范围，如果没有指定范围，则作用于但前行。</p>
+
+<ol>
+<li><code>:1,10s/from/to/</code> 表示在第1到第10行（包含第1，第10行）之间搜索替换；</li>
+<li><code>:10s/from/to/</code> 表示只在第10行搜索替换；</li>
+<li><code>:%s/from/to/</code> 表示在所有行中搜索替换；</li>
+<li><code>1,$s/from/to/</code> 同上。</li>
+</ol>
+</li>
+<li><p><code>flags</code> 有如下四个选项：</p>
+
+<ol>
+<li><code>c</code> confirm，每次替换前询问；</li>
+<li><code>e</code> error， 不显示错误；</li>
+<li><code>g</code> globle，不询问，整行替换。如果不加<code>g</code>选项，则只替换每行的第一个匹配到的字符串；</li>
+<li><code>i</code> ignore，忽略大小写。</li>
+</ol>
+
+
+<p>这些选项可以合并使用，如<code>cgi</code>表示不区分大小写，整行替换，替换前询问。</p></li>
+</ul>
+
+
+<h3>正则表达式</h3>
+
+<ol>
+<li><p>元字符</p>
+
+<ul>
+<li><p>元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> .      </td>
+<td align="left"> 匹配任意字符</td>
+</tr>
+<tr>
+<td align="center"> [abc]  </td>
+<td align="left"> 匹配方括号中的任意一个字符，可用<code>-</code>表示字符范围。如[a-z0-9]匹配小写字母和数字</td>
+</tr>
+<tr>
+<td align="center"> [&#94;abc] </td>
+<td align="left"> 匹配除方括号中字符之外的任意字符</td>
+</tr>
+<tr>
+<td align="center"> \d     </td>
+<td align="left"> 匹配阿拉伯数字，等同于[0-9]</td>
+</tr>
+<tr>
+<td align="center"> \D     </td>
+<td align="left"> 匹配阿拉伯数字之外的任意字符，等同于[&#94;0-9]</td>
+</tr>
+<tr>
+<td align="center"> \x     </td>
+<td align="left"> 匹配十六进制数字，等同于[0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \X     </td>
+<td align="left"> 匹配十六进制数字之外的任意字符，等同于[&#94;0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \l     </td>
+<td align="left"> 匹配[a-z]</td>
+</tr>
+<tr>
+<td align="center"> \L     </td>
+<td align="left"> 匹配[&#94;a-z]</td>
+</tr>
+<tr>
+<td align="center"> \u     </td>
+<td align="left"> 匹配[A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \U     </td>
+<td align="left"> 匹配[&#94;A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \w     </td>
+<td align="left"> 匹配单词字母，等同于[0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \W     </td>
+<td align="left"> 匹配单词字母之外的任意字符，等同于[&#94;0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \t     </td>
+<td align="left"> 匹配<code>&lt;TAB&gt;</code>字符</td>
+</tr>
+<tr>
+<td align="center"> \s     </td>
+<td align="left"> 匹配空白字符，等同于[\t]</td>
+</tr>
+<tr>
+<td align="center"> \S     </td>
+<td align="left"> 匹配非空白字符，等同于[&#94;\t]</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>一些普通字符需转意</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> \*   </td>
+<td align="left"> 匹配<code>*</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> &#46;   </td>
+<td align="left"> 匹配<code>.</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \/   </td>
+<td align="left"> 匹配 <code>/</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> &#92;   </td>
+<td align="left"> 匹配 <code>\</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \[   </td>
+<td align="left"> 匹配 <code>[</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \]   </td>
+<td align="left"> 匹配 <code>]</code> 字符</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>表示数量的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">*     </td>
+<td align="left"> 匹配0-任意个</td>
+</tr>
+<tr>
+<td align="center">\+    </td>
+<td align="left"> 匹配1-任意个</td>
+</tr>
+<tr>
+<td align="center">\?    </td>
+<td align="left"> 匹配0-1个</td>
+</tr>
+<tr>
+<td align="center">\{n,m}</td>
+<td align="left"> 匹配n-m个</td>
+</tr>
+<tr>
+<td align="center">\{n}  </td>
+<td align="left"> 匹配n个</td>
+</tr>
+<tr>
+<td align="center">\{n,} </td>
+<td align="left"> 匹配n-任意个</td>
+</tr>
+<tr>
+<td align="center">\{,m} </td>
+<td align="left"> 匹配0-m个</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+<li><p>表示位置的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">$      </td>
+<td align="left"> 匹配行尾</td>
+</tr>
+<tr>
+<td align="center">&#94;  </td>
+<td align="left"> 匹配行首</td>
+</tr>
+<tr>
+<td align="center">\&lt;    </td>
+<td align="left"> 匹配单词词首</td>
+</tr>
+<tr>
+<td align="center">\>    </td>
+<td align="left"> 匹配单词词尾</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+</ul>
+</li>
+<li><p>替换变量</p>
+
+<p>在正则式中以<code>\(</code>和<code>\)</code>括起来的正则表达式，在后面使用的时候可以用<code>\1</code>、<code>\2</code>等变量来访问<code>\(</code>和<code>\)</code>中的内容。</p></li>
+</ol>
+
+
+<h3>例子</h3>
+
+<ol>
+<li>删除行尾空格：<code>:%s/\s+$//g</code></li>
+<li>删除行首多余空格：<code>%s/^\s*//</code> 或者 <code>%s/^ *//</code></li>
+<li>删除沒有內容的空行：<code>%s/^$//</code> 或者 <code>g/^$/d</code></li>
+<li>删除包含有空格组成的空行：<code>%s/^\s*$//</code> 或者 <code>g/^\s*$/d</code></li>
+<li>删除以空格或TAB开头到结尾的空行：<code>%s/^[ |\t]*$//</code> 或者 <code>g/^[ |\t]*$/d</code></li>
+<li><p>把文中的所有字符串“abc……xyz”替换为“xyz……abc”可以有下列写法</p>
+
+<pre><code>:%s/abc\(.*\)xyz/xyz\1abc/g
+:%s/\(abc\)\(.*\)\(xyz\)/\3\2\1/g
+</code></pre></li>
+</ol>
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-13T22:18:00+08:00" pubdate data-updated="true">Jan 13<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/vim/'>vim</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/12/27/github-plus-octopressda-jian-mian-fei-blog/" title="Previous Post: GitHub+Octopress搭建免费blog">&laquo; GitHub+Octopress搭建免费blog</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/02/27/ios-push-apns/" title="Next Post: 一步一步实现iOS应用PUSH功能">一步一步实现iOS应用PUSH功能 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://tanqisen.github.com/blog/2013/01/13/vim-search-replace-regex/';
+        var disqus_url = 'http://tanqisen.github.com/blog/2013/01/13/vim-search-replace-regex/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

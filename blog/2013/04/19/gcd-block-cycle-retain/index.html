@@ -1,0 +1,962 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>正确使用Block避免Cycle Retain和Crash - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="本文只讨论了MRC时的情况，ARC下略有不同 Block简介 Block作为C语言的扩展，并不是高新技术，和其他语言的闭包或lambda表达式是一回事。需要注意的是由于Objective-C在iOS中不支持GC机制，使用Block必须自己管理内存，而内存管理正是使用Block坑最多的地方， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/blog/2013/04/19/gcd-block-cycle-retain/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>西湖的水，哥的泪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">所有文章</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">正确使用Block避免Cycle Retain和Crash</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-19T11:03:00+08:00" pubdate data-updated="true">Apr 19<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote><p>本文只讨论了MRC时的情况，ARC下略有不同</p></blockquote>
+
+<h3>Block简介</h3>
+
+<p>  Block作为C语言的扩展，并不是高新技术，和其他语言的闭包或lambda表达式是一回事。需要注意的是由于Objective-C在iOS中不支持GC机制，使用Block必须自己管理内存，而内存管理正是使用Block坑最多的地方，错误的内存管理
+要么导致return cycle内存泄漏要么内存被提前释放导致crash。
+Block的使用很像函数指针，不过与函数最大的不同是：Block可以访问函数以外、词法作用域以内的外部变量的值。换句话说，Block不仅
+实现函数的功能，还能携带函数的执行环境。</p>
+
+<!--more-->
+
+
+<p>可以这样理解，Block其实包含两个部分内容</p>
+
+<ol>
+<li>Block执行的代码，这是在编译的时候已经生成好的；</li>
+<li>一个包含<code>Block执行时需要的所有外部变量值</code>的数据结构。 Block将使用到的、作用域附近到的<code>变量的值</code>建立一份快照拷贝到栈上。</li>
+</ol>
+
+
+<p>Block与函数另一个不同是，Block类似ObjC的对象，可以使用自动释放池管理内存（但Block并不完全等同于ObjC对象，后面将详细说明）。</p>
+
+<h3>Block基本语法</h3>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="c1">// 声明一个Block变量</span>
+</span><span class='line'><span class="kt">long</span> <span class="p">(</span><span class="o">^</span><span class="n">sum</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">)</span> <span class="o">=</span> <span class="nb">nil</span><span class="p">;</span>
+</span><span class='line'><span class="c1">// sum是个Block变量，该Block类型有两个int型参数，返回类型是long。</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 定义Block并赋给变量sum</span>
+</span><span class='line'><span class="n">sum</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 调用Block：</span>
+</span><span class='line'><span class="kt">long</span> <span class="n">s</span> <span class="o">=</span> <span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>定义一个实例函数，该函数返回Block：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">-</span> <span class="p">(</span><span class="kt">long</span> <span class="p">(</span><span class="o">^</span><span class="p">)(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">))</span> <span class="nf">sumBlock</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="p">[[</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span> <span class="n">copy</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 调用Block</span>
+</span><span class='line'><span class="p">[</span><span class="n">self</span> <span class="n">sumBlock</span><span class="p">](</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>是不是感觉很怪？为了看的舒服，我们把Block类型typedef一下</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">typedef</span> <span class="nf">long</span> <span class="p">(</span><span class="o">^</span><span class="n">BlkSum</span><span class="p">)(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">-</span> <span class="p">(</span><span class="n">BlkSum</span><span class="p">)</span> <span class="nf">sumBlock</span> <span class="p">{</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">BlkSum</span> <span class="n">blk</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="p">[[</span><span class="n">blk</span> <span class="n">copy</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>Block在内存中的位置</h3>
+
+<p>根据Block在内存中的位置分为三种类型NSGlobalBlock，NSStackBlock, NSMallocBlock。</p>
+
+<ul>
+<li>NSGlobalBlock：类似函数，位于text段；</li>
+<li>NSStackBlock：位于栈内存，函数返回后Block将无效；</li>
+<li>NSMallocBlock：位于堆内存。</li>
+</ul>
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">BlkSum</span> <span class="n">blk1</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;blk1 = %@&quot;</span><span class="p">,</span> <span class="n">blk1</span><span class="p">);</span><span class="c1">// blk1 = &lt;__NSGlobalBlock__: 0x47d0&gt;</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'><span class="n">BlkSum</span> <span class="n">blk2</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;blk2 = %@&quot;</span><span class="p">,</span> <span class="n">blk2</span><span class="p">);</span> <span class="c1">// blk2 = &lt;__NSStackBlock__: 0xbfffddf8&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">BlkSum</span> <span class="n">blk3</span> <span class="o">=</span> <span class="p">[[</span><span class="n">blk2</span> <span class="n">copy</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'><span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;blk3 = %@&quot;</span><span class="p">,</span> <span class="n">blk3</span><span class="p">);</span> <span class="c1">// blk3 = &lt;__NSMallocBlock__: 0x902fda0&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>为什么blk1类型是NSGlobalBlock，而blk2类型是NSStackBlock？blk1和blk2的区别在于，blk1没有使用Block以外的任何外部变量，Block不需要建立局部变量值的快照，这使blk1与函数没有任何区别，从blk1所在内存地址0x47d0猜测编译器把blk1放到了text代码段。blk2与blk1唯一不同是的使用了局部变量base，在定义（注意是定义，不是运行）blk2时，局部变量base当前值被copy到栈上，作为<code>常量</code>供Block使用。执行下面代码，结果是203，而不是204。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">base</span> <span class="o">+=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">BlkSum</span> <span class="n">sum</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>  <span class="n">base</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%ld&quot;</span><span class="p">,</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">));</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>在Block内变量base是只读的，如果想在Block内改变base的值，在定义base时要用 <code>__block</code>修饰：<code>__block int base = 100;</code>。</p></blockquote>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="n">__block</span> <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">base</span> <span class="o">+=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">BlkSum</span> <span class="n">sum</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">base</span> <span class="o">+=</span> <span class="mi">10</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>  <span class="n">base</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">));</span>
+</span><span class='line'>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">base</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p>输出将是214,211。Block中使用<code>__block</code>修饰的变量时，将取变量此刻运行时的值，而不是定义时的快照。这个例子中，执行<code>sum(1,2)</code>时，base将取<code>base++</code>之后的值，也就是201，再执行Block<code>base+=10; base+a+b</code>，运行结果是214。执行完Block时，base已经变成211了。</p></blockquote>
+
+<h3>Block的copy、retain、release操作</h3>
+
+<p>不同于NSObjec的copy、retain、release操作：</p>
+
+<ul>
+<li>Block_copy与copy等效，Block_release与release等效；</li>
+<li>对Block不管是retain、copy、release都不会改变引用计数retainCount，retainCount始终是1；</li>
+<li>NSGlobalBlock：retain、copy、release操作都无效；</li>
+<li>NSStackBlock：retain、release操作无效，必须注意的是，NSStackBlock在函数返回后，Block内存将被回收。即使retain也没用。容易犯的错误是[<code>[mutableAarry addObject:stackBlock]</code>，在函数出栈后，从mutableAarry中取到的stackBlock已经被回收，变成了野指针。正确的做法是先将stackBlock copy到堆上，然后加入数组：<code>[mutableAarry addObject:[[stackBlock copy] autorelease]]</code>。支持copy，copy之后生成新的NSMallocBlock类型对象。</li>
+<li>NSMallocBlock支持retain、release，虽然retainCount始终是1，但内存管理器中仍然会增加、减少计数。copy之后不会生成新的对象，只是增加了一次引用，类似retain；</li>
+<li>尽量不要对Block使用retain操作。</li>
+</ul>
+
+
+<h3>Block对不同类型的变量的存取</h3>
+
+<h5>基本类型</h5>
+
+<ul>
+<li>局部自动变量，在Block中只读。Block定义时copy变量的值，在Block中作为常量使用，所以即使变量的值在Block外改变，也不影响他在Block中的值。</li>
+</ul>
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'><span class="n">BlkSum</span> <span class="n">sum</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="c1">// base++; 编译错误，只读</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="n">base</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">));</span> <span class="c1">// 这里输出是103，而不是3</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>static变量、全局变量。如果把上个例子的base改成全局的、或static。Block就可以对他进行读写了。因为全局变量或静态变量在内存中的地址是固定的，Block在读取该变量值的时候是直接从其所在内存读出，获取到的是最新值，而不是在定义时copy的常量。</li>
+</ul>
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">static</span> <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'><span class="n">BlkSum</span> <span class="n">sum</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">base</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="n">base</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">base</span><span class="p">);</span>
+</span><span class='line'><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">));</span> <span class="c1">// 这里输出是3，而不是103</span>
+</span><span class='line'><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">base</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>输出结果是<code>0 4 1</code>，表明Block外部对base的更新会影响Block中的base的取值，同样Block对base的更新也会影响Block外部的base值。</p>
+
+<ul>
+<li>Block变量，被<code>__block</code>修饰的变量称作Block变量。
+基本类型的Block变量等效于全局变量、或静态变量。</li>
+</ul>
+
+
+<h5>Block被另一个Block使用时，另一个Block被copy到堆上时，被使用的Block也会被copy。但作为参数的Block是不会发生copy的。</h5>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
+</span><span class='line'>  <span class="kt">int</span> <span class="n">base</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">BlkSum</span> <span class="n">blk</span> <span class="o">=</span> <span class="o">^</span> <span class="kt">long</span> <span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">return</span>  <span class="n">base</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">;</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>  <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">blk</span><span class="p">);</span> <span class="c1">// &lt;__NSStackBlock__: 0xbfffdb40&gt;</span>
+</span><span class='line'>  <span class="n">bar</span><span class="p">(</span><span class="n">blk</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">bar</span><span class="p">(</span><span class="n">BlkSum</span> <span class="n">sum_blk</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span><span class="n">sum_blk</span><span class="p">);</span> <span class="c1">// 与上面一样，说明作为参数传递时，并不会发生copy</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="kt">void</span> <span class="p">(</span><span class="o">^</span><span class="n">blk</span><span class="p">)</span> <span class="p">(</span><span class="n">BlkSum</span><span class="p">)</span> <span class="o">=</span> <span class="o">^</span> <span class="p">(</span><span class="n">BlkSum</span> <span class="n">sum</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span><span class="n">sum</span><span class="p">);</span>     <span class="c1">// 无论blk在堆上还是栈上，作为参数的Block不会发生copy。</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span><span class="n">sum_blk</span><span class="p">);</span> <span class="c1">// 当blk copy到堆上时，sum_blk也被copy了一分到堆上上。</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>  <span class="n">blk</span><span class="p">(</span><span class="n">sum_blk</span><span class="p">);</span> <span class="c1">// blk在栈上</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="n">blk</span> <span class="o">=</span> <span class="p">[[</span><span class="n">blk</span> <span class="n">copy</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>  <span class="n">blk</span><span class="p">(</span><span class="n">sum_blk</span><span class="p">);</span> <span class="c1">// blk在堆上</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h5>ObjC对象，不同于基本类型，Block会引起对象的引用计数变化。</h5>
+
+<p>先看下面代码</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">@interface</span> <span class="nc">MyClass</span> : <span class="nc">NSObject</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">NSObject</span><span class="o">*</span> <span class="n">_instanceObj</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="k">@end</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">@implementation</span> <span class="nc">MyClass</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">NSObject</span><span class="o">*</span> <span class="n">__globalObj</span> <span class="o">=</span> <span class="nb">nil</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">-</span> <span class="p">(</span><span class="kt">id</span><span class="p">)</span> <span class="nf">init</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">self</span> <span class="o">=</span> <span class="p">[</span><span class="n">super</span> <span class="n">init</span><span class="p">])</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">_instanceObj</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSObject</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">];</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="nf">test</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">static</span> <span class="n">NSObject</span><span class="o">*</span> <span class="n">__staticObj</span> <span class="o">=</span> <span class="nb">nil</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">__globalObj</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSObject</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">__staticObj</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSObject</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">];</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">NSObject</span><span class="o">*</span> <span class="n">localObj</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSObject</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">__block</span> <span class="n">NSObject</span><span class="o">*</span> <span class="n">blockObj</span> <span class="o">=</span> <span class="p">[[</span><span class="n">NSObject</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">];</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">typedef</span> <span class="kt">void</span> <span class="p">(</span><span class="o">^</span><span class="n">MyBlock</span><span class="p">)(</span><span class="kt">void</span><span class="p">)</span> <span class="p">;</span>
+</span><span class='line'>    <span class="n">MyBlock</span> <span class="n">aBlock</span> <span class="o">=</span> <span class="o">^</span><span class="p">{</span>
+</span><span class='line'>        <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">__globalObj</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">__staticObj</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">_instanceObj</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">localObj</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">blockObj</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">};</span>
+</span><span class='line'>    <span class="n">aBlock</span> <span class="o">=</span> <span class="p">[[</span><span class="n">aBlock</span> <span class="n">copy</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">aBlock</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%d&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">__globalObj</span> <span class="n">retainCount</span><span class="p">]);</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%d&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">__staticObj</span> <span class="n">retainCount</span><span class="p">]);</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%d&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">_instanceObj</span> <span class="n">retainCount</span><span class="p">]);</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%d&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">localObj</span> <span class="n">retainCount</span><span class="p">]);</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%d&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">blockObj</span> <span class="n">retainCount</span><span class="p">]);</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'><span class="k">@end</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+</span><span class='line'>    <span class="err">@</span><span class="n">autoreleasepool</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">MyClass</span><span class="o">*</span> <span class="n">obj</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">MyClass</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>        <span class="p">[</span><span class="n">obj</span> <span class="n">test</span><span class="p">];</span>
+</span><span class='line'>        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>执行结果为<code>1 1 1 2 1</code>。</p>
+
+<p><code>__globalObj</code>和<code>__staticObj</code>在内存中的位置是确定的，所以Block copy时不会retain对象。</p>
+
+<p><code>_instanceObj</code>在Block copy时也没有直接retain <code>_instanceObj</code>对象本身，但会retain self。所以在Block中可以直接读写<code>_instanceObj</code>变量。</p>
+
+<p><code>localObj</code>在Block copy时，系统自动retain对象，增加其引用计数。</p>
+
+<p><code>blockObj</code>在Block copy时也不会retain。</p>
+
+<h5>非ObjC对象，如GCD队列dispatch_queue_t。Block copy时并不会自动增加他的引用计数，这点要非常小心。</h5>
+
+<h3>Block中使用的ObjC对象的行为</h3>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">copy</span><span class="p">)</span> <span class="kt">void</span><span class="p">(</span><span class="o">^</span><span class="n">myBlock</span><span class="p">)(</span><span class="kt">void</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">MyClass</span><span class="o">*</span> <span class="n">obj</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">MyClass</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="p">[</span><span class="n">obj</span> <span class="n">doSomething</span><span class="p">];</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>对象obj在Block被copy到堆上的时候自动retain了一次。因为Block不知道obj什么时候被释放，为了不在Block使用obj前被释放，Block retain了obj一次，在Block被释放的时候，obj被release一次。</p>
+
+<h3>retain cycle</h3>
+
+<p>retain cycle问题的根源在于Block和obj可能会互相强引用，互相retain对方，这样就导致了retain cycle，最后这个Block和obj就变成了孤岛，谁也释放不了谁。比如：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">ASIHTTPRequest</span> <span class="o">*</span><span class="n">request</span> <span class="o">=</span> <span class="p">[</span><span class="n">ASIHTTPRequest</span> <span class="nl">requestWithURL:</span><span class="n">url</span><span class="p">];</span>
+</span><span class='line'><span class="p">[</span><span class="n">request</span> <span class="nl">setCompletionBlock:</span><span class="o">^</span><span class="p">{</span>
+</span><span class='line'>  <span class="n">NSString</span><span class="o">*</span> <span class="n">string</span> <span class="o">=</span> <span class="p">[</span><span class="n">request</span> <span class="n">responseString</span><span class="p">];</span>
+</span><span class='line'><span class="p">}];</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>       <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>       <span class="o">|</span> <span class="n">request</span>   <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>
+</span><span class='line'>  <span class="o">---&gt;</span> <span class="o">|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>       <span class="o">|</span> <span class="n">retain</span> <span class="mi">2</span>  <span class="o">|</span> <span class="o">&lt;--------</span> <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>
+</span><span class='line'>       <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>       <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>解决这个问题的办法是使用弱引用打断retain cycle：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">__block</span> <span class="n">ASIHTTPRequest</span> <span class="o">*</span><span class="n">request</span> <span class="o">=</span> <span class="p">[</span><span class="n">ASIHTTPRequest</span> <span class="nl">requestWithURL:</span><span class="n">url</span><span class="p">];</span>
+</span><span class='line'><span class="p">[</span><span class="n">request</span> <span class="nl">setCompletionBlock:</span><span class="o">^</span><span class="p">{</span>
+</span><span class='line'>  <span class="n">NSString</span><span class="o">*</span> <span class="n">string</span> <span class="o">=</span> <span class="p">[</span><span class="n">request</span> <span class="n">responseString</span><span class="p">];</span>
+</span><span class='line'><span class="p">}];</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">request</span>   <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>
+</span><span class='line'> <span class="o">----&gt;|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span> <span class="o">&lt;</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span>           <span class="o">|</span>   <span class="n">weak</span>    <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><code>request</code>被持有者释放后。request 的retainCount变成0,request被dealloc，request释放持有的Block，导致Block的retainCount变成0，也被销毁。这样这两个对象内存都被回收。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">request</span>   <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>
+</span><span class='line'> <span class="o">--</span><span class="n">X</span><span class="o">-&gt;|</span>           <span class="o">|</span> <span class="o">----</span><span class="n">X</span><span class="o">---&gt;</span> <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">retain</span> <span class="mi">0</span>  <span class="o">|</span> <span class="o">&lt;</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">|</span> <span class="n">retain</span> <span class="mi">0</span>  <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span>           <span class="o">|</span>   <span class="n">weak</span>    <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>与上面情况类似的陷阱：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="p">[</span><span class="n">self</span> <span class="n">doSomething</span><span class="p">];</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里self和myBlock循环引用，解决办法同上：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">__block</span> <span class="n">MyClass</span><span class="o">*</span> <span class="n">weakSelf</span> <span class="o">=</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="p">[</span><span class="n">weakSelf</span> <span class="n">doSomething</span><span class="p">];</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">retain</span><span class="p">)</span> <span class="n">NSString</span><span class="o">*</span> <span class="n">someVar</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">_someVer</span><span class="p">);</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里在Block中虽然没直接使用self，但使用了成员变量。在Block中使用成员变量，retain的不是这个变量，而会retain self。解决办法也和上面一样。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="k">@property</span> <span class="p">(</span><span class="n">nonatomic</span><span class="p">,</span> <span class="n">retain</span><span class="p">)</span> <span class="n">NSString</span><span class="o">*</span> <span class="n">someVar</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">__block</span> <span class="n">MyClass</span><span class="o">*</span> <span class="n">weakSelf</span> <span class="o">=</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">self</span><span class="p">.</span><span class="n">someVer</span><span class="p">);</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>或者</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">NSString</span><span class="o">*</span> <span class="n">str</span> <span class="o">=</span> <span class="n">_someVer</span><span class="p">;</span>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>retain cycle不只发生在两个对象之间，也可能发生在多个对象之间，这样问题更复杂，更难发现</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">ClassA</span><span class="o">*</span> <span class="n">objA</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">ClassA</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>  <span class="n">objA</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span><span class="p">{</span>
+</span><span class='line'>    <span class="p">[</span><span class="n">self</span> <span class="n">doSomething</span><span class="p">];</span>
+</span><span class='line'>  <span class="p">};</span>
+</span><span class='line'>  <span class="n">self</span><span class="p">.</span><span class="n">objA</span> <span class="o">=</span> <span class="n">objA</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="o">+-----------+</span>           <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>  <span class="o">|</span>   <span class="n">self</span>    <span class="o">|</span>           <span class="o">|</span>   <span class="n">objA</span>    <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>
+</span><span class='line'>  <span class="o">|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>  <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>           <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>           <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>
+</span><span class='line'>  <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>  <span class="o">+-----------+</span>           <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>       <span class="o">^</span>                                                <span class="o">|</span>
+</span><span class='line'>       <span class="o">|</span>                                                <span class="o">|</span>
+</span><span class='line'>       <span class="o">+------------------------------------------------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>解决办法同样是用<code>__block</code>打破循环引用</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">ClassA</span><span class="o">*</span> <span class="n">objA</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">ClassA</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">MyClass</span><span class="o">*</span> <span class="n">weakSelf</span> <span class="o">=</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'><span class="n">objA</span><span class="p">.</span><span class="n">myBlock</span> <span class="o">=</span> <span class="o">^</span><span class="p">{</span>
+</span><span class='line'>  <span class="p">[</span><span class="n">weakSelf</span> <span class="n">doSomething</span><span class="p">];</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="n">self</span><span class="p">.</span><span class="n">objA</span> <span class="o">=</span> <span class="n">objA</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<blockquote><p><strong>注意</strong>：MRC中<code>__block</code>是不会引起retain；但在ARC中<code>__block</code>则会引起retain。ARC中应该使用<code>__weak</code>或<code>__unsafe_unretained</code>弱引用。<code>__weak</code>只能在iOS5以后使用。</p></blockquote>
+
+<h3>Block使用对象被提前释放</h3>
+
+<p>看下面例子，有这种情况，如果不只是<code>request</code>持有了Block，另一个对象也持有了Block。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">request</span>   <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>   <span class="n">objA</span>
+</span><span class='line'> <span class="o">----&gt;|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|&lt;--------</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span> <span class="o">&lt;</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">|</span> <span class="n">retain</span> <span class="mi">2</span>  <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span>           <span class="o">|</span>   <span class="n">weak</span>    <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这时如果request 被持有者释放。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">request</span>   <span class="o">|</span>           <span class="o">|</span>   <span class="n">Block</span>   <span class="o">|</span>   <span class="n">objA</span>
+</span><span class='line'> <span class="o">--</span><span class="n">X</span><span class="o">-&gt;|</span>           <span class="o">|</span> <span class="o">--------&gt;</span> <span class="o">|</span>           <span class="o">|&lt;--------</span>
+</span><span class='line'>      <span class="o">|</span> <span class="n">retain</span> <span class="mi">0</span>  <span class="o">|</span> <span class="o">&lt;</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">-</span> <span class="o">|</span> <span class="n">retain</span> <span class="mi">1</span>  <span class="o">|</span>
+</span><span class='line'>      <span class="o">|</span>           <span class="o">|</span>   <span class="n">weak</span>    <span class="o">|</span>           <span class="o">|</span>
+</span><span class='line'>      <span class="o">+-----------+</span>           <span class="o">+-----------+</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这时request已被完全释放，但Block仍被objA持有，没有释放，如果这时触发了Block，在Block中将访问已经销毁的request，这将导致程序crash。为了避免这种情况，开发者必须要注意对象和Block的生命周期。</p>
+
+<p>另一个常见错误使用是，开发者担心retain cycle错误的使用<code>__block</code>。比如</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="n">__block</span> <span class="n">kkProducView</span><span class="o">*</span> <span class="n">weakSelf</span> <span class="o">=</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'><span class="n">dispatch_async</span><span class="p">(</span><span class="n">dispatch_get_main_queue</span><span class="p">(),</span> <span class="o">^</span><span class="p">{</span>
+</span><span class='line'>  <span class="n">weakSelf</span><span class="p">.</span><span class="n">xx</span> <span class="o">=</span> <span class="n">xx</span><span class="p">;</span>
+</span><span class='line'><span class="p">});</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>将Block作为参数传给dispatch_async时，系统会将Block拷贝到堆上，如果Block中使用了实例变量，还将retain self，因为dispatch_async并不知道self会在什么时候被释放，为了确保系统调度执行Block中的任务时self没有被意外释放掉，dispatch_async必须自己retain一次self，任务完成后再release self。但这里使用<code>__block</code>，使dispatch_async没有增加self的引用计数，这使得在系统在调度执行Block之前，self可能已被销毁，但系统并不知道这个情况，导致Block被调度执行时self已经被释放导致crash。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'><span class="c1">// MyClass.m</span>
+</span><span class='line'><span class="k">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="nf">test</span> <span class="p">{</span>
+</span><span class='line'>  <span class="n">__block</span> <span class="n">MyClass</span><span class="o">*</span> <span class="n">weakSelf</span> <span class="o">=</span> <span class="n">self</span><span class="p">;</span>
+</span><span class='line'>  <span class="kt">double</span> <span class="n">delayInSeconds</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">;</span>
+</span><span class='line'>  <span class="n">dispatch_time_t</span> <span class="n">popTime</span> <span class="o">=</span> <span class="n">dispatch_time</span><span class="p">(</span><span class="n">DISPATCH_TIME_NOW</span><span class="p">,</span> <span class="p">(</span><span class="n">int64_t</span><span class="p">)(</span><span class="n">delayInSeconds</span> <span class="o">*</span> <span class="n">NSEC_PER_SEC</span><span class="p">));</span>
+</span><span class='line'>  <span class="n">dispatch_after</span><span class="p">(</span><span class="n">popTime</span><span class="p">,</span> <span class="n">dispatch_get_main_queue</span><span class="p">(),</span> <span class="o">^</span><span class="p">(</span><span class="kt">void</span><span class="p">){</span>
+</span><span class='line'>    <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">weakSelf</span><span class="p">);</span>
+</span><span class='line'><span class="p">});</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// other.m</span>
+</span><span class='line'><span class="n">MyClass</span><span class="o">*</span> <span class="n">obj</span> <span class="o">=</span> <span class="p">[[[</span><span class="n">MyClass</span> <span class="n">alloc</span><span class="p">]</span> <span class="n">init</span><span class="p">]</span> <span class="n">autorelease</span><span class="p">];</span>
+</span><span class='line'><span class="p">[</span><span class="n">obj</span> <span class="n">test</span><span class="p">];</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里用dispatch_after模拟了一个异步任务，10秒后执行Block。但执行Block的时候<code>MyClass* obj</code>已经被释放了，导致crash。解决办法是不要使用<code>__block</code>。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-19T11:03:00+08:00" pubdate data-updated="true">Apr 19<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/02/27/ios-push-apns/" title="Previous Post: 一步一步实现iOS应用PUSH功能">&laquo; 一步一步实现iOS应用PUSH功能</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/" title="Next Post: 一步一步实现Android打飞机（一）">一步一步实现Android打飞机（一） &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://tanqisen.github.com/blog/2013/04/19/gcd-block-cycle-retain/';
+        var disqus_url = 'http://tanqisen.github.com/blog/2013/04/19/gcd-block-cycle-retain/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

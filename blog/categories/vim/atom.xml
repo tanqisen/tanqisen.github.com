@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: vim | Cooper's Blog]]></title>
+  <link href="http://tanqisen.github.com/blog/categories/vim/atom.xml" rel="self"/>
+  <link href="http://tanqisen.github.com/"/>
+  <updated>2015-06-30T17:28:42+08:00</updated>
+  <id>http://tanqisen.github.com/</id>
+  <author>
+    <name><![CDATA[tanqisen]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[vim查找替换及正则表达式的使用]]></title>
+    <link href="http://tanqisen.github.com/blog/2013/01/13/vim-search-replace-regex/"/>
+    <updated>2013-01-13T22:18:00+08:00</updated>
+    <id>http://tanqisen.github.com/blog/2013/01/13/vim-search-replace-regex</id>
+    <content type="html"><![CDATA[<h3>简单替换表达式</h3>
+
+<p>  <code>
+  :[range]s/from/to/[flags]
+ </code></p>
+
+<ul>
+<li><p><code>range</code>:搜索范围，如果没有指定范围，则作用于但前行。</p>
+
+<ol>
+<li><code>:1,10s/from/to/</code> 表示在第1到第10行（包含第1，第10行）之间搜索替换；</li>
+<li><code>:10s/from/to/</code> 表示只在第10行搜索替换；</li>
+<li><code>:%s/from/to/</code> 表示在所有行中搜索替换；</li>
+<li><code>1,$s/from/to/</code> 同上。</li>
+</ol>
+</li>
+<li><p><code>flags</code> 有如下四个选项：</p>
+
+<ol>
+<li><code>c</code> confirm，每次替换前询问；</li>
+<li><code>e</code> error， 不显示错误；</li>
+<li><code>g</code> globle，不询问，整行替换。如果不加<code>g</code>选项，则只替换每行的第一个匹配到的字符串；</li>
+<li><code>i</code> ignore，忽略大小写。</li>
+</ol>
+
+
+<p>这些选项可以合并使用，如<code>cgi</code>表示不区分大小写，整行替换，替换前询问。</p></li>
+</ul>
+
+
+<h3>正则表达式</h3>
+
+<ol>
+<li><p>元字符</p>
+
+<ul>
+<li><p>元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> .      </td>
+<td align="left"> 匹配任意字符</td>
+</tr>
+<tr>
+<td align="center"> [abc]  </td>
+<td align="left"> 匹配方括号中的任意一个字符，可用<code>-</code>表示字符范围。如[a-z0-9]匹配小写字母和数字</td>
+</tr>
+<tr>
+<td align="center"> [&#94;abc] </td>
+<td align="left"> 匹配除方括号中字符之外的任意字符</td>
+</tr>
+<tr>
+<td align="center"> \d     </td>
+<td align="left"> 匹配阿拉伯数字，等同于[0-9]</td>
+</tr>
+<tr>
+<td align="center"> \D     </td>
+<td align="left"> 匹配阿拉伯数字之外的任意字符，等同于[&#94;0-9]</td>
+</tr>
+<tr>
+<td align="center"> \x     </td>
+<td align="left"> 匹配十六进制数字，等同于[0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \X     </td>
+<td align="left"> 匹配十六进制数字之外的任意字符，等同于[&#94;0-9A-Fa-f]</td>
+</tr>
+<tr>
+<td align="center"> \l     </td>
+<td align="left"> 匹配[a-z]</td>
+</tr>
+<tr>
+<td align="center"> \L     </td>
+<td align="left"> 匹配[&#94;a-z]</td>
+</tr>
+<tr>
+<td align="center"> \u     </td>
+<td align="left"> 匹配[A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \U     </td>
+<td align="left"> 匹配[&#94;A-Z]</td>
+</tr>
+<tr>
+<td align="center"> \w     </td>
+<td align="left"> 匹配单词字母，等同于[0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \W     </td>
+<td align="left"> 匹配单词字母之外的任意字符，等同于[&#94;0-9A-Za-z_]</td>
+</tr>
+<tr>
+<td align="center"> \t     </td>
+<td align="left"> 匹配<code>&lt;TAB&gt;</code>字符</td>
+</tr>
+<tr>
+<td align="center"> \s     </td>
+<td align="left"> 匹配空白字符，等同于[\t]</td>
+</tr>
+<tr>
+<td align="center"> \S     </td>
+<td align="left"> 匹配非空白字符，等同于[&#94;\t]</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>一些普通字符需转意</p>
+
+<table>
+<thead>
+<tr>
+<th align="center"> 元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"> \*   </td>
+<td align="left"> 匹配<code>*</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \.   </td>
+<td align="left"> 匹配<code>.</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \/   </td>
+<td align="left"> 匹配 <code>/</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \\   </td>
+<td align="left"> 匹配 <code>\</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \[   </td>
+<td align="left"> 匹配 <code>[</code> 字符</td>
+</tr>
+<tr>
+<td align="center"> \]   </td>
+<td align="left"> 匹配 <code>]</code> 字符</td>
+</tr>
+</tbody>
+</table>
+
+
+<p> <br/></p></li>
+<li><p>表示数量的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">*     </td>
+<td align="left"> 匹配0-任意个</td>
+</tr>
+<tr>
+<td align="center">\+    </td>
+<td align="left"> 匹配1-任意个</td>
+</tr>
+<tr>
+<td align="center">\?    </td>
+<td align="left"> 匹配0-1个</td>
+</tr>
+<tr>
+<td align="center">\{n,m}</td>
+<td align="left"> 匹配n-m个</td>
+</tr>
+<tr>
+<td align="center">\{n}  </td>
+<td align="left"> 匹配n个</td>
+</tr>
+<tr>
+<td align="center">\{n,} </td>
+<td align="left"> 匹配n-任意个</td>
+</tr>
+<tr>
+<td align="center">\{,m} </td>
+<td align="left"> 匹配0-m个</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+<li><p>表示位置的元字符</p>
+
+<table>
+<thead>
+<tr>
+<th align="center">元字符 </th>
+<th align="left"> 说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">$      </td>
+<td align="left"> 匹配行尾</td>
+</tr>
+<tr>
+<td align="center">&#94;  </td>
+<td align="left"> 匹配行首</td>
+</tr>
+<tr>
+<td align="center">\&lt;    </td>
+<td align="left"> 匹配单词词首</td>
+</tr>
+<tr>
+<td align="center">\>    </td>
+<td align="left"> 匹配单词词尾</td>
+</tr>
+</tbody>
+</table>
+
+
+<p><br/></p></li>
+</ul>
+</li>
+<li><p>替换变量</p>
+
+<p>在正则式中以<code>\(</code>和<code>\)</code>括起来的正则表达式，在后面使用的时候可以用<code>\1</code>、<code>\2</code>等变量来访问<code>\(</code>和<code>\)</code>中的内容。</p></li>
+</ol>
+
+
+<h3>例子</h3>
+
+<ol>
+<li>删除行尾空格：<code>:%s/\s+$//g</code></li>
+<li>删除行首多余空格：<code>%s/^\s*//</code> 或者 <code>%s/^ *//</code></li>
+<li>删除沒有內容的空行：<code>%s/^$//</code> 或者 <code>g/^$/d</code></li>
+<li>删除包含有空格组成的空行：<code>%s/^\s*$//</code> 或者 <code>g/^\s*$/d</code></li>
+<li>删除以空格或TAB开头到结尾的空行：<code>%s/^[ |\t]*$//</code> 或者 <code>g/^[ |\t]*$/d</code></li>
+<li><p>把文中的所有字符串“abc……xyz”替换为“xyz……abc”可以有下列写法</p>
+
+<pre><code>:%s/abc\(.*\)xyz/xyz\1abc/g
+:%s/\(abc\)\(.*\)\(xyz\)/\3\2\1/g
+</code></pre></li>
+</ol>
+
+]]></content>
+  </entry>
+  
+</feed>

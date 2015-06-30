@@ -1,0 +1,490 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>一步一步实现iOS应用PUSH功能 - Cooper's Blog</title>
+  <meta name="author" content="tanqisen">
+
+  
+  <meta name="description" content="1. push原理 iOS push 工作机制可以用下图简要概括 Provider:应用自己的服务器；
+APNS:Apple Push Notification Service的简称，苹果的PUSH服务器； push的主要工作流程是： iOS设备连接网络后，会自动与APNS保持类似TCP的长链接， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://tanqisen.github.com/blog/2013/02/27/ios-push-apns/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Cooper's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-37402341-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Cooper's Blog</a></h1>
+  
+    <h2>西湖的水，哥的泪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:tanqisen.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">首页</a></li>
+  <li><a href="/blog/archives">所有文章</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">一步一步实现iOS应用PUSH功能</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-27T16:25:00+08:00" pubdate data-updated="true">Feb 27<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h3>1.  push原理</h3>
+
+<p><strong>iOS push 工作机制可以用下图简要概括</strong></p>
+
+<p><img src="/images/ios_push.jpg"></p>
+
+<ul>
+<li><code>Provider</code>:应用自己的服务器；</li>
+<li><code>APNS</code>:Apple Push Notification Service的简称，苹果的PUSH服务器；</li>
+</ul>
+
+
+<p><strong>push的主要工作流程是：</strong></p>
+
+<ul>
+<li>iOS设备连接网络后，会自动与APNS保持类似TCP的长链接，等待APNS推送消息的到来；</li>
+<li>应用启动时注册消息推送，并获取设备的在APNS中注册的唯一设备标示deviceToken上传给应用服务器(即Provider)；</li>
+<li>在需要给应用推送消息时，Provider把push内容、接收push消息的deviceToken按APNS指定的格式打包好，发送给APNS；</li>
+<li>APNS收到Provider发送的消息后，查找deviceToken指定的设备，如果该设备已经和APNS建立了连接，则立即将消息推送给该设备，如果设备不在线，则在该设备下次连接到APNS后将消息推送到设备。请注意苹果并不保证推送一定成功；</li>
+<li>设备收到push消息后，iOS系统会根据SSL证书判断这个push消息是发给那个应用的，进而启动相应客户端。</li>
+</ul>
+
+
+<!--more-->
+
+
+<blockquote><p>上述过程中，有两个关键步骤需要自己处理的是：1.客户端获取deviceToken，并上传到Provider；2.Provider发送push消息到APNS。这两个步骤中都需要苹果的push证书授权，下面就来介绍如何生成push证书，以及Provisioning Profile。</p></blockquote>
+
+<h3>2.  push证书及Provisioning Profile生成</h3>
+
+<ul>
+<li><p><strong>用付费帐号登录到<a href="http://developer.apple.com/iphone/index.action">http://developer.apple.com/iphone/index.action</a></strong></p></li>
+<li><p><strong>生成push证书前要先生成开发证书</strong></p>
+
+<p>生成开发证书的过程不详细介绍，可以参考<a href="http://www.cocoachina.com/bbs/read.php?tid=7923&amp;keyword=%B7%A2%B2%BC">如何联机调试和发布程序</a>。只是有一点需要注意的，生成开发证书过程中需要通过Keychain生成一个CSR文件，默认名为CertificateSigningRequest.certSigningRequest，这个文件将在生成push证书的时候用到。</p></li>
+<li><p><strong>创建一个App ID</strong></p>
+
+<ul>
+<li>创建过程中Description可以任意填写，比如叫<code>push_demo</code>；</li>
+<li>Bundle Identifier一般用<code>com.company.appname</code>这样的格式，例如<code>com.mycompany.demo</code>；</li>
+</ul>
+
+
+<blockquote><p>注意：要用push功能的Bundle Identifier一定不能出现通配符，比如<code>com.mycompany.*</code>，这样的名字是不能使用push的。</p></blockquote></li>
+<li><p><strong>生成Push SSL Certificate</strong></p>
+
+<p>  生成好App ID后点击<code>Configure</code>进入配置页。打开<code>Enable for Apple Push Notification service</code>选项，该选项下有<code>Development Push SSL Certificate</code>和<code>Production Push SSL Certificate</code>两个SSL Certificate可以配置，前面一个是用来的开发的push证书，后面一个是用来发布的。我们以开发push证书为例，点击<code>Development Push SSL Certificate</code>-><code>Configure</code>，后面会要求选择CSR文件，这就是生成开发证书时的CertificateSigningRequest.certSigningRequest文件，选择好CSR后就生成好相应的SSL Certificate了。下载下来，保存名为<code>aps_developer.cer</code>。</p></li>
+<li><p><strong>从Keychain中导出私钥、设置好密码，命名为private_key.p12</strong></p></li>
+<li><p><strong>生成push证书</strong></p>
+
+<ul>
+<li><p>这时我们一共得到3个文件:</p>
+
+<ol>
+<li>CertificateSigningRequest.certSigningRequest</li>
+<li>private_key.p12</li>
+<li>aps_developer.cer</li>
+</ol>
+</li>
+<li><p>将aps_developer.cer转成pem格式</p>
+
+<pre><code>openssl x509 -in aps_developer.cer -inform DER -out aps_developer.pem -outform PEM 
+</code></pre></li>
+<li><p>将private_key.p12格式的私钥转换成private_key.pem</p>
+
+<pre><code>openssl pkcs12 -nocerts -out private_key.pem -in private_key.p12
+</code></pre>
+
+<blockquote><p>这一步会要求输入p12私钥的密码，以及设置新生成的pem的密码。</p></blockquote></li>
+<li><p>创建用于服务端的SSL p12格式证书，命名为aps_developer.p12</p>
+
+<pre><code>openssl pkcs12 -export -in aps_developer.pem -inkey private_key.pem -certfile CertificateSigningRequest.certSigningRequest -name "aps_developer" -out aps_developer.p12
+</code></pre>
+
+<blockquote><p>这一步会要求输入private_key.pem的密码，注意不是private_key.p12的密码。如果密码错误，或者CertificateSigningRequest.certSigningRequest文件不匹配都不能正常生成aps_developer.p12文件，如果生成的aps_developer.p12文件大小是0，说明生成过程中出了问题，请检查pem私钥、密码、以及CertificateSigningRequest.certSigningRequest是否正确。</p></blockquote>
+
+<p>aps_developer.p12就是Provider向APNS发送push消息需要的SSL证书。把这个证书和密码提供给服务端，服务端就可以发送push消息给APNS了。这时服务端已经可以工作了，但客户端还必须配置相应的Provisioning Profile才能启动应用的push功能。</p>
+
+<blockquote><p>服务器配置需注意的是，由于我们生成的是开发环境的push证书，所以服务器应该连接APNS的sandbox环境地址：<code>gateway.sandbox.push.apple.com:2195</code>，如果应用正式发布，就要连接正式环境，必须生成相应的发布证书，并连接APNS正式环境地址：<code>gateway.push.apple.com:2195</code>。</p></blockquote></li>
+</ul>
+</li>
+<li><p><strong>生成Provisioning Profile</strong></p>
+
+<ul>
+<li>新建Profile，命名为push_dev；</li>
+<li>选择相应证书；</li>
+<li>App ID选择push_demo;</li>
+<li>选择设备；</li>
+<li>下载并安装该Profile供开发使用；</li>
+</ul>
+</li>
+</ul>
+
+
+<h3>3.  Xcode证书设置、Info.plist设置</h3>
+
+<ul>
+<li>用Xcode打开客户端工程，设置Info.plist的Bundle identifier为<code>com.mycompany.demo</code>。</li>
+<li>打开工程设置，必须将证书设置为与push_dev关联的证书。</li>
+</ul>
+
+
+<h3>4.  客户端获取deviceToken</h3>
+
+<p>  服务端要发送push消息给某一设备还必须知道该设备的deviceToken。应用运行后获取到deviceToken，然后上传给服务器，下面介绍应用如何获取deviceToken。应用必须先注册使用push功能。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="o">-</span> <span class="p">(</span><span class="kt">BOOL</span><span class="p">)</span><span class="nl">application:</span><span class="p">(</span><span class="n">UIApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">application</span> <span class="nl">didFinishLaunchingWithOptions:</span><span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">launchOptions</span> <span class="p">{</span>
+</span><span class='line'>      <span class="p">[[</span><span class="n">UIApplication</span> <span class="n">sharedApplication</span><span class="p">]</span> <span class="nl">registerForRemoteNotificationTypes:</span><span class="p">(</span><span class="n">UIRemoteNotificationTypeAlert</span> <span class="o">|</span> <span class="n">UIRemoteNotificationTypeSound</span> <span class="o">|</span> <span class="n">UIRemoteNotificationTypeBadge</span><span class="p">)];</span>
+</span><span class='line'>      <span class="c1">// do something</span>
+</span><span class='line'>      <span class="c1">// ...</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  在AppDelegate中添加下面方法来获取deviceToken：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="o">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nl">application:</span><span class="p">(</span><span class="n">UIApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">app</span> <span class="nl">didRegisterForRemoteNotificationsWithDeviceToken:</span><span class="p">(</span><span class="n">NSData</span> <span class="o">*</span><span class="p">)</span><span class="n">deviceToken</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">NSString</span> <span class="o">*</span><span class="n">token</span> <span class="o">=</span> <span class="p">[</span><span class="n">NSString</span> <span class="nl">stringWithFormat:</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">deviceToken</span><span class="p">];</span>
+</span><span class='line'>      <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">token</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>  <span class="o">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nl">application:</span><span class="p">(</span><span class="n">UIApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">app</span> <span class="nl">didFailToRegisterForRemoteNotificationsWithError:</span><span class="p">(</span><span class="n">NSError</span> <span class="o">*</span><span class="p">)</span><span class="n">error</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;%@&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  应用获取到deviceToken后，上传给Provider，Provider就可以用这个deviceToken给这个设备push消息了。</p>
+
+<h3>5.  Payload格式及自定义数据</h3>
+
+<p>  服务器配置好证书并拿到deviceToken后就可以向APNS发送消息了。发送消息的格式如下图所示：</p>
+
+<p>  <img src="/images/ios_push_payload.jpg"></p>
+
+<p>  Payload就是push的消息负载，这就是应用需要关心的数据。
+  Payload是一个JSON字典，最大值是 256 字节，超过这个限制，APNS将拒绝转发。基本格式如下：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;aps&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;alert&quot;</span><span class="p">:</span><span class="s2">&quot;Hello Push!&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;badge&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;sound&quot;</span><span class="p">:</span><span class="s2">&quot;default&quot;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  必须包含<code>aps</code>键值。<code>badge</code>表示应用程序图标显示的数字，<code>sound</code>表示收到push的提示音。
+  Payload的具体结构参考<a href="http://developer.apple.com/library/mac/#documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/ApplePushService/ApplePushService.html">Apple Push Notification Service</a></p>
+
+<p>  要在这个结构中新增自定义数据，请加在aps空间之外。比如后台推送消息给应用同时要求应用打开某个页面：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='json'><span class='line'>  <span class="p">{</span>
+</span><span class='line'>    <span class="nt">&quot;aps&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span class='line'>      <span class="nt">&quot;alert&quot;</span><span class="p">:</span><span class="s2">&quot;Hello Push!&quot;</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;badge&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+</span><span class='line'>      <span class="nt">&quot;sound&quot;</span><span class="p">:</span><span class="s2">&quot;default&quot;</span>
+</span><span class='line'>    <span class="p">},</span>
+</span><span class='line'>    <span class="nt">&quot;page&quot;</span><span class="p">:</span><span class="s2">&quot;home&quot;</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  后台告诉客户端收到这个push后打开应用的主页，这里的page、home都是自己定义的。必须注意的是，Payload大小不能超过限制，所以可以把自定义数据更简化点，比如可以把home与编号1对应，page简写为p，这样<code>"p":1</code>表示打开主页，可以缩小Payload的大小。</p>
+
+<h3>6.  客户端接收push消息</h3>
+
+<p>  iOS系统收到push消息后，如果用户点击查看，系统将根据证书启动相应应用。如果应用已经启动，将调用AppDelegate的方法：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="o">-</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="nl">application:</span><span class="p">(</span><span class="n">UIApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">application</span> <span class="nl">didReceiveRemoteNotification:</span><span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">userInfo</span> <span class="p">{</span>
+</span><span class='line'>      <span class="c1">// userInfo 就是push消息的Payload</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  如果应用还没有启动，通过push冷启动后，仍然能在启动后获取Payload：</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="o">-</span> <span class="p">(</span><span class="kt">BOOL</span><span class="p">)</span><span class="nl">application:</span><span class="p">(</span><span class="n">UIApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">application</span> <span class="nl">didFinishLaunchingWithOptions:</span><span class="p">(</span><span class="n">NSDictionary</span> <span class="o">*</span><span class="p">)</span><span class="n">launchOptions</span> <span class="p">{</span>
+</span><span class='line'>      <span class="n">NSDictionary</span><span class="o">*</span> <span class="n">userInfo</span> <span class="o">=</span> <span class="p">[</span><span class="n">launchOptions</span> <span class="nl">objectForKey:</span><span class="n">UIApplicationLaunchOptionsRemoteNotificationKey</span><span class="p">];</span>
+</span><span class='line'>      <span class="n">NSLog</span><span class="p">(</span><span class="s">@&quot;Payload: %@&quot;</span><span class="p">,</span> <span class="n">userInfo</span><span class="p">);</span>
+</span><span class='line'>  <span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  目前为止，push功能基本就完成了，可以开始push功能测试了，如果服务器还没开发完成，或者想快速测试是否能正常push，可以使用下面的代码实现后台push测试。发送push前要配置好SSL证书，以及deviceToken和Payload结构。</p>
+
+<p>  <a href="https://github.com/stefanhafeneger/PushMeBaby">object c 版本</a><br/>
+  <a href="https://github.com/kumaranvram/PushNotificationApp">c 版本</a><br/>
+  <a href="https://github.com/qiaohe/pushNotificationService">java 版本</a><br/>
+  <a href="https://github.com/dsaki/PushNotification">php 版本</a><br/></p>
+
+<p>  还有个小问题，当Payload设置了badge，应用图标上将一直显示一个数字提示，如果要清除数字提示，或者设置成其他数字，调用下面函数就可以完成。</p>
+
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='objc'><span class='line'>  <span class="p">[[</span><span class="n">UIApplication</span> <span class="n">sharedApplication</span><span class="p">]</span> <span class="nl">setApplicationIconBadgeNumber:</span><span class="n">number</span><span class="p">];</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  number为0就会清除数字提示。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">tanqisen</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-02-27T16:25:00+08:00" pubdate data-updated="true">Feb 27<span>th</span>, 2013</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/ios/'>iOS</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/01/13/vim-search-replace-regex/" title="Previous Post: vim查找替换及正则表达式的使用">&laquo; vim查找替换及正则表达式的使用</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/04/19/gcd-block-cycle-retain/" title="Next Post: 正确使用Block避免Cycle Retain和Crash">正确使用Block避免Cycle Retain和Crash &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/06/06/how-to-prevent-app-crack/">如何防止客户端被破解</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-2/">一步一步实现Android打飞机（二）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/13/develop-android-wechat-flight-game-step-by-step-1/">一步一步实现Android打飞机（一）</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/04/19/gcd-block-cycle-retain/">正确使用Block避免Cycle Retain和Crash</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/02/27/ios-push-apns/">一步一步实现iOS应用PUSH功能</a>
+      </li>
+    
+  </ul>
+</section>
+<section>
+  <h1>About Me</h1>
+  <p>A little something about me.</p>
+</section>
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - tanqisen -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'tanqisen';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://tanqisen.github.com/blog/2013/02/27/ios-push-apns/';
+        var disqus_url = 'http://tanqisen.github.com/blog/2013/02/27/ios-push-apns/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
