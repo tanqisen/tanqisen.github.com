@@ -131,3 +131,26 @@ categories:
     - 生成并发布：
       
           $ rake gen_deploy
+
+## 切换电脑怎么办 ##
+
+1.  本地内容都提交到github source分支
+
+2.  切换到新电脑上
+
+        $ git clone git@github.com:yourname/yourname.github.com.git
+        $ cd yourname.github.com
+        $ git checkout source
+        $ mkdir _deploy
+        $ cd _deploy
+        $ git init
+        $ git remote add git@github.com:yourname/yourname.github.com.git
+        $ git pull origin master
+        $ cd ..
+
+3.  切换到先前电脑时
+
+        $ git pull origin source
+        $ cd _deploy
+        $ git pull origin master
+        $ cd ..
