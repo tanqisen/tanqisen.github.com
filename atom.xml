@@ -4,7 +4,7 @@
   <title><![CDATA[Cooper's Blog]]></title>
   <link href="http://tanqisen.github.com/atom.xml" rel="self"/>
   <link href="http://tanqisen.github.com/"/>
-  <updated>2015-06-30T17:28:42+08:00</updated>
+  <updated>2015-06-30T17:50:53+08:00</updated>
   <id>http://tanqisen.github.com/</id>
   <author>
     <name><![CDATA[tanqisen]]></name>
@@ -2767,6 +2767,32 @@ $ rake update_style             # update the template's style
 </code></pre></li>
 </ul>
 </li>
+</ol>
+
+
+<h2>切换电脑怎么办</h2>
+
+<ol>
+<li><p>本地内容都提交到github source分支</p></li>
+<li><p>切换到新电脑上</p>
+
+<pre><code>$ git clone git@github.com:yourname/yourname.github.com.git
+$ cd yourname.github.com
+$ git checkout source
+$ mkdir _deploy
+$ cd _deploy
+$ git init
+$ git remote add git@github.com:yourname/yourname.github.com.git
+$ git pull origin master
+$ cd ..
+</code></pre></li>
+<li><p>切换到先前电脑时</p>
+
+<pre><code>$ git pull origin source
+$ cd _deploy
+$ git pull origin master
+$ cd ..
+</code></pre></li>
 </ol>
 
 ]]></content>
